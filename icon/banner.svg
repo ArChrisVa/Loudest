@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" width="1200" height="340" role="img" aria-label="Loudest. Finds the moments worth editing in a long VOD.">
+  <!-- The banner at the top of the GitHub page: the icon's idea made wide.
+       Hours of even sound as a line of bars, and the magnifying glass over
+       the one loud moment. Laid out like the Tickwatch banner (1200 x 340,
+       name and tagline on the left). The text uses the reader's own fonts. -->
+  <defs>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#20203c"/><stop offset="1" stop-color="#131326"/></linearGradient>
+    <clipPath id="clip"><rect width="1200" height="340" rx="14"/></clipPath>
+    <clipPath id="lens"><circle cx="888" cy="228" r="59"/></clipPath>
+  </defs>
+  <g clip-path="url(#clip)">
+    <rect width="1200" height="340" fill="url(#card)"/>
+    <g stroke="#2b2b52" stroke-width="1" opacity="1"><line x1="0" y1="80" x2="1200" y2="80"/><line x1="0" y1="140" x2="1200" y2="140"/><line x1="0" y1="200" x2="1200" y2="200"/><line x1="0" y1="260" x2="1200" y2="260"/><line x1="100" y1="0" x2="100" y2="340"/><line x1="200" y1="0" x2="200" y2="340"/><line x1="300" y1="0" x2="300" y2="340"/><line x1="400" y1="0" x2="400" y2="340"/><line x1="500" y1="0" x2="500" y2="340"/><line x1="600" y1="0" x2="600" y2="340"/><line x1="700" y1="0" x2="700" y2="340"/><line x1="800" y1="0" x2="800" y2="340"/><line x1="900" y1="0" x2="900" y2="340"/><line x1="1000" y1="0" x2="1000" y2="340"/><line x1="1100" y1="0" x2="1100" y2="340"/></g>
+    <path d="M4 222.5 V233.5 M12 222.3 V233.7 M20 222.6 V233.4 M28 223.9 V232.1 M36 222.2 V233.8 M44 221.1 V234.9 M52 223.5 V232.5 M60 223.9 V232.1 M68 221.1 V234.9 M76 224.4 V231.6 M84 223.4 V232.6 M92 224.3 V231.7 M100 222.6 V233.4 M108 221.5 V234.5 M116 223.9 V232.1 M124 223 V233 M132 222.9 V233.1 M140 222.4 V233.6 M148 224 V232 M156 224.1 V231.9 M164 222.1 V233.9 M172 221.9 V234.1 M180 223.9 V232.1 M188 223 V233 M196 221.8 V234.2 M204 223.2 V232.8 M212 221.1 V234.9 M220 219.3 V236.7 M252 220.4 V235.6 M260 224.1 V231.9 M268 222.8 V233.2 M276 223.3 V232.7 M284 222.3 V233.7 M292 221.2 V234.8 M300 221.2 V234.8 M308 221.5 V234.5 M316 221 V235 M324 221.7 V234.3 M332 223.9 V232.1 M340 221 V235 M348 221.4 V234.6 M356 222.6 V233.4 M364 222.8 V233.2 M372 220.8 V235.2 M380 224.2 V231.8 M388 223 V233 M396 222.2 V233.8 M404 222.3 V233.7 M412 222.6 V233.4 M420 224.4 V231.6 M428 222.3 V233.7 M436 218.8 V237.2 M468 219.2 V236.8 M476 223.9 V232.1 M484 222.8 V233.2 M492 223.8 V232.2 M500 223.3 V232.7 M508 220.6 V235.4 M516 223.4 V232.6 M524 221.8 V234.2 M532 223.3 V232.7 M540 222.2 V233.8 M548 222.9 V233.1 M556 223.1 V232.9 M564 221.3 V234.7 M572 223.8 V232.2 M580 223.9 V232.1 M588 224.4 V231.6 M596 222.6 V233.4 M604 222.5 V233.5 M612 223.1 V232.9 M620 221.5 V234.5 M628 223.3 V232.7 M636 221.7 V234.3 M644 223.1 V232.9 M652 219.7 V236.3 M684 221.3 V234.7 M692 224.1 V231.9 M700 222.4 V233.6 M708 222.8 V233.2 M716 221.9 V234.1 M724 223.5 V232.5 M732 223.2 V232.8 M740 221.6 V234.4 M748 222.9 V233.1 M756 223.3 V232.7 M764 224.5 V231.5 M772 221.7 V234.3 M780 220.6 V235.4 M788 222.5 V233.5 M796 222.9 V233.1 M804 221.9 V234.1 M812 220.7 V235.3 M820 223.2 V232.8 M956 223.4 V232.6 M964 224.1 V231.9 M972 222.6 V233.4 M980 221.5 V234.5 M988 224.4 V231.6 M996 221.9 V234.1 M1004 221.5 V234.5 M1012 223.9 V232.1 M1020 223.7 V232.3 M1028 221.2 V234.8 M1036 220.7 V235.3 M1044 224.2 V231.8 M1052 224.2 V231.8 M1060 223.8 V232.2 M1068 223.3 V232.7 M1076 222.2 V233.8 M1084 221.1 V234.9 M1092 224.1 V231.9 M1100 221.8 V234.2 M1108 222.9 V233.1 M1116 220.8 V235.2 M1124 220.8 V235.2 M1132 223.4 V232.6 M1140 222.3 V233.7 M1148 221.8 V234.2 M1156 220.5 V235.5 M1164 221.8 V234.2 M1172 224.3 V231.7 M1180 221.5 V234.5 M1188 221.5 V234.5 M1196 221.6 V234.4" fill="none" stroke="#453c85" stroke-width="4" stroke-linecap="round"/>
+    <path d="M228 214.7 V241.3 M236 204.2 V251.8 M244 212.3 V243.7 M444 211.2 V244.8 M452 190.8 V265.2 M460 209.8 V246.2 M660 212 V244 M668 197 V259 M676 211.8 V244.2" fill="none" stroke="#8b5cf6" stroke-width="4" stroke-linecap="round"/>
+    
+    <path d="M984 132 Q986.4 141.6 996 144 Q986.4 146.4 984 156 Q981.6 146.4 972 144 Q981.6 141.6 984 132 Z" fill="#c4b5fd"/><path d="M784 160 Q785.2 164.8 790 166 Q785.2 167.2 784 172 Q782.8 167.2 778 166 Q782.8 164.8 784 160 Z" fill="#c4b5fd"/>
+    <path d="M938 278 L985 325" fill="none" stroke="#8b5cf6" stroke-width="22" stroke-linecap="round"/>
+    <circle cx="888" cy="228" r="66" fill="#23234a" stroke="#c4b5fd" stroke-width="12"/>
+    <g clip-path="url(#lens)" fill="none" stroke-linecap="round">
+      <path d="M854 206 V250 M922 211 V245" stroke="#6f62bd" stroke-width="15"/>
+      <path d="M888 184 V272" stroke="#f1ecff" stroke-width="17"/>
+    </g>
+    <path d="M845 211 C851 195 864 184 879 181" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity=".28"/>
+    
+    <text x="56" y="132" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="76" font-weight="700" fill="#f1ecff" letter-spacing="-2.5">Loudest</text>
+    <text x="60" y="172" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="23" font-weight="400" fill="#9d97c9">Finds the moments worth editing in a long VOD</text>
+    <rect x="0.5" y="0.5" width="1199" height="339" rx="14" fill="none" stroke="#35355f"/>
+  </g>
+</svg>
