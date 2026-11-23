@@ -1,0 +1,58 @@
+Loudest is built on the work of other people. This file names what ships
+with it, under which licence, and where the full licence text and the source
+code can be found.
+
+Loudest itself runs each of these as it was published; none of them has been
+changed.
+
+
+SHIPPED WITH LOUDEST
+====================
+
+FFmpeg 6.1.1 ("essentials" build for Windows by gyan.dev)
+  Reads and cuts video and sound. Loudest starts it as a separate program.
+  Licence:      GNU General Public License, version 3
+  Licence text: resources\app.asar.unpacked\node_modules\ffmpeg-static\ffmpeg.exe.LICENSE
+  Build notes:  resources\app.asar.unpacked\node_modules\ffmpeg-static\ffmpeg.exe.README
+  Source code:  https://github.com/FFmpeg/FFmpeg/commit/e38092ef93
+                https://www.gyan.dev/ffmpeg/builds/
+  Packaged by:  ffmpeg-static 5.3.0, https://github.com/eugeneware/ffmpeg-static
+
+Electron 45 (includes Chromium and Node.js)
+  The window, the video player and the app's own code run on it.
+  Licence:      MIT, with many parts under their own licences
+  Licence text: LICENSE.electron.txt and LICENSES.chromium.html, beside Loudest.exe
+  Source code:  https://github.com/electron/electron
+
+ONNX Runtime 1.31 (onnxruntime-node)
+  Runs the sound-recognition model.
+  Licence:      MIT, Copyright (c) Microsoft Corporation
+  Licence text: https://github.com/microsoft/onnxruntime/blob/main/LICENSE
+  Source code:  https://github.com/microsoft/onnxruntime
+
+YAMNet
+  The sound-recognition model that hears laughs, screams, shouts, speech and
+  music. Made by Google (TensorFlow Model Garden, AudioSet), used here in the
+  ONNX form published at https://huggingface.co/audiomagic/yamnet-onnx
+  Licence:      Apache License 2.0
+  Licence text: resources\app.asar.unpacked\models\yamnet-LICENSE.txt
+  Source:       https://github.com/tensorflow/models/tree/master/research/audioset/yamnet
+
+
+FETCHED WHEN FIRST NEEDED
+=========================
+
+These are not part of the installer. Loudest downloads each one from its
+makers' own page the first time the feature that needs it is used, and keeps
+it in its data folder (%APPDATA%\loudest\tools).
+
+yt-dlp
+  Downloads the chat of a YouTube stream ("Get chat" with a YouTube link).
+  Licence:      The Unlicense; its Windows program also contains parts under
+                the GNU General Public License, version 3 or later
+  Home:         https://github.com/yt-dlp/yt-dlp
+
+TwitchDownloaderCLI
+  Downloads the chat of a Twitch stream ("Get chat" with a Twitch link).
+  Licence:      MIT, Copyright (c) lay295 and contributors
+  Home:         https://github.com/lay295/TwitchDownloader
