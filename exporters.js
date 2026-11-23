@@ -205,6 +205,17 @@ function safeName(text) {
   return text.replace(/[<>:"/\\|?*\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120).replace(/[. ]+$/, '');
 }
 
+// True when two paths lead to the same file, however each is spelled:
+// capitals, Windows' short names, a folder reached through a link.
+function sameFile(one, other) {
+  try {
+    return fs.realpathSync.native(one).toLowerCase() === fs.realpathSync.native(other).toLowerCase();
+  } catch {
+    // One of them is not there, so they cannot be the same file.
+    return false;
+  }
+}
+
 // Cuts each moment out of the video as a file of its own, in a new folder
 // inside `folder` named after the video. Nothing is re-encoded: picture and
 // sound are copied as they are, which is quick and loses no quality. The
@@ -222,6 +233,14 @@ async function cutClips(videoPath, moments, folder, onProgress) {
   for (const [index, moment] of moments.entries()) {
     onProgress(index);
     const target = path.join(into, safeName(`${stamp(moment.start)} ${moment.name}`) + video.ext);
+    // A clip must never land on the video it is cut from: ffmpeg would empty
+    // the file while reading it. The names only meet when the video is itself
+    // a clip that is cut again into its own folder under its own name.
+    // ffmpeg notices by itself only when both paths are spelled alike.
+    if (sameFile(target, videoPath)) {
+      const text = 'One of these clips would replace the video it is cut from. Choose another folder.';
+      throw Object.assign(new Error(text), { friendly: text });
+    }
     await new Promise((resolve, reject) => {
       cutting = spawn(paths.ffmpeg, [
         '-hide_banner', '-nostdin', '-v', 'error',

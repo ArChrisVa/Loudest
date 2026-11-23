@@ -575,6 +575,9 @@ ipcMain.handle('transcript:possible', () => canTranscribe());
 // Answers { lines }, { error } or { cancelled }.
 ipcMain.handle('transcript:run', async (event, videoPath) => {
   needVideoPath(videoPath);
+  // The window hides the Transcript tab while the speech program is not
+  // there. Asked anyway, this would download the 574 MB speech model for nothing.
+  if (!canTranscribe()) return { error: 'This version of Loudest cannot write out speech.' };
   try {
     const lines = await transcribe(videoPath, {
       language: readSettings().language,
@@ -674,7 +677,7 @@ ipcMain.handle('export:clips', async (event, videoPath, list) => {
   } catch (error) {
     if (error.cancelled) return { cancelled: true };
     console.error('Could not cut the clips:', error);
-    return { error: 'The clips could not be written to that folder.' };
+    return { error: error.friendly ?? 'The clips could not be written to that folder.' };
   }
 });
 
@@ -701,6 +704,8 @@ function createWindow() {
   // Without this, dropping a file anywhere on the window makes Electron
   // navigate away from the app and show the file itself.
   win.webContents.on('will-navigate', (event) => event.preventDefault());
+  // Nothing in the app opens a second window, so nothing is allowed to.
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
   win.loadFile('index.html');
 }
