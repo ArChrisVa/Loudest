@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- A line of sound bars across the tile, and a magnifying glass over its
+       middle that shows the one loud moment, lit. The app finds that moment
+       in hours of sound. Colours: violet, dark navy and pale lavender. -->
+  <defs>
+    <linearGradient id="violet" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a07cff"/>
+      <stop offset="1" stop-color="#7645ee"/>
+    </linearGradient>
+    <clipPath id="tile"><rect width="256" height="256" rx="56"/></clipPath>
+    <clipPath id="lens"><circle cx="128" cy="122" r="48"/></clipPath>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect width="256" height="256" fill="url(#violet)"/>
+
+    <!-- two sparkles -->
+    <path d="M214 31 Q216.6 41.4 227 44 Q216.6 46.6 214 57 Q211.4 46.6 201 44 Q211.4 41.4 214 31 Z" fill="#f1ecff"/>
+    <path d="M42 41 Q43.4 46.6 49 48 Q43.4 49.4 42 55 Q40.6 49.4 35 48 Q40.6 46.6 42 41 Z" fill="#f1ecff"/>
+
+    <!-- the line of bars -->
+    <path d="M18 110 V134 M40 98 V146 M62 106 V138 M84 92 V152 M106 102 V142 M128 78 V166 M150 100 V144 M172 90 V154 M194 108 V136 M216 96 V148 M238 110 V134"
+          fill="none" stroke="#d9ccff" stroke-width="11" stroke-linecap="round"/>
+
+    <!-- the magnifying glass -->
+    <path d="M170 164 L224 218" fill="none" stroke="#1a1a2e" stroke-width="27" stroke-linecap="round"/>
+    <circle cx="128" cy="122" r="56" fill="#1a1a2e" stroke="#f1ecff" stroke-width="15"/>
+
+    <!-- what it shows: the middle of the line, bigger, with the loud bar lit -->
+    <g clip-path="url(#lens)" fill="none" stroke-linecap="round">
+      <path d="M98 102 V142 M158 106 V138" stroke="#7a6ad0" stroke-width="15"/>
+      <path d="M128 82 V162" stroke="#f1ecff" stroke-width="17"/>
+    </g>
+
+    <!-- a glint on the glass -->
+    <path d="M92 108 C97 94 108 85 120 82" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity=".28"/>
+  </g>
+</svg>

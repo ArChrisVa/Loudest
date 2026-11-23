@@ -1,0 +1,1231 @@
+:root {
+  /* Tells the browser part to draw its own pieces (menus, scroll bars, sliders) dark as well. */
+  color-scheme: dark;
+  --bg0: #0d0e11;
+  --bg1: #16181c;
+  --bg3: #272b33;
+  --line: #2a2e37;
+  --text: #e6e6e6;
+  --dim: #9aa1ad;
+  --warn: #ffb4a8;
+  --accent: #ff5a3c;
+  --scream: #b18cff;
+  --shout: #f2c14e;
+  --raised: #4fc3d1;
+  --chat: #6ee7a0;
+  --well: #1d2026;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* The work screen sets its own `display`, which would otherwise beat `hidden`. */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg1);
+  color: var(--text);
+  font: 13px/1.45 "Segoe UI", system-ui, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+[role="alert"] {
+  color: var(--warn);
+}
+
+[role="alert"]:empty,
+[role="status"]:empty {
+  display: none;
+}
+
+.dim {
+  color: var(--dim);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg3);
+  color: var(--text);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: #313641;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn svg,
+.new-tile svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* A pair of words where one is on: the two views of the Home screen, and
+   Moments and Transcript beside the player. */
+.home-tabs button,
+.side-tabs button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dim);
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.home-tabs button:hover,
+.side-tabs button:hover,
+.home-tabs [aria-pressed="true"],
+.side-tabs [aria-pressed="true"] {
+  color: var(--text);
+}
+
+/* ---------- Home screen ---------- */
+
+#home {
+  height: 100%;
+  padding: 26px 34px;
+  overflow: auto;
+}
+
+.home-tabs {
+  display: flex;
+  gap: 22px;
+  margin: 0 0 18px;
+  font-size: 20px;
+}
+
+#home-message {
+  margin: 0 0 14px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 20px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.new-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1.5px dashed #3a4050;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  cursor: pointer;
+}
+
+.new-tile b {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.new-tile:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.card {
+  position: relative;
+  min-width: 0;
+}
+
+.card-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  /* Shown when there is no picture of the video. */
+  background: linear-gradient(135deg, #2c2f3a, #4a4f63);
+}
+
+.thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-open:hover .thumb {
+  border-color: #596176;
+}
+
+.dur {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.7);
+  font: 11px/1.5 Consolas, monospace;
+}
+
+.dur:empty {
+  display: none;
+}
+
+.card-title {
+  display: block;
+  margin-top: 8px;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-meta {
+  display: block;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+/* Hidden until you point at the card or reach the button with the keyboard. */
+.card-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.card:hover .card-remove,
+.card-remove:focus-visible,
+.card.missing .card-remove {
+  opacity: 1;
+}
+
+.card-remove:hover {
+  background: var(--accent);
+  color: #1a0d09;
+}
+
+.card.missing .thumb {
+  opacity: 0.4;
+}
+
+.card.missing .card-open {
+  cursor: default;
+}
+
+.card.missing .card-meta {
+  color: var(--warn);
+}
+
+/* ---------- Home screen: every kept moment ---------- */
+
+#kept {
+  max-width: 900px;
+}
+
+#kept p {
+  margin: 0;
+}
+
+#kept h2 {
+  margin: 18px 0 6px;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#kept ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kept-row {
+  display: grid;
+  grid-template-columns: 62px minmax(120px, 280px) minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.kept-row:hover:enabled {
+  background: var(--bg3);
+}
+
+.kept-row:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.kept-row .when {
+  font-family: Consolas, monospace;
+}
+
+.kept-row .label,
+.kept-row .note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kept-row .note {
+  color: var(--dim);
+}
+
+/* ---------- Work screen (one video) ---------- */
+
+#work {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.work-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg0);
+}
+
+#work-title {
+  flex: 1;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.work-tools {
+  display: flex;
+  gap: 6px;
+}
+
+/* Lit while the video has a chat. */
+#chat-button.on {
+  color: var(--chat);
+}
+
+/* ---------- The small boxes under the buttons at the top right ---------- */
+
+/* The browser part opens and closes them (a click elsewhere or Escape
+   closes). Each hangs from the button named here. */
+#chat-button {
+  anchor-name: --chat-button;
+}
+
+#settings-button {
+  anchor-name: --settings-button;
+}
+
+#export-button {
+  anchor-name: --export-button;
+}
+
+#chat-box {
+  position-anchor: --chat-button;
+}
+
+#settings-box {
+  position-anchor: --settings-button;
+}
+
+#export-box {
+  position-anchor: --export-button;
+}
+
+.box {
+  inset: auto;
+  top: anchor(bottom);
+  right: anchor(right);
+  width: 340px;
+  margin: 6px 0 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg1);
+  color: var(--text);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.box p {
+  margin: 0;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.box-rows {
+  display: grid;
+  gap: 8px;
+}
+
+.box-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.box-row > span {
+  flex: 1;
+}
+
+#chat-status:not(:empty),
+#export-status:not(:empty) {
+  margin-top: 10px;
+}
+
+#settings-box {
+  width: auto;
+}
+
+#lead-in {
+  width: 56px;
+}
+
+/* The Export box is a short menu. */
+.box.menu {
+  width: 300px;
+  padding: 6px;
+}
+
+.box.menu p {
+  padding: 6px 8px;
+}
+
+.box.menu #export-status:not(:empty) {
+  margin-top: 0;
+}
+
+.box.menu button {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.box.menu button:hover:enabled {
+  background: var(--bg3);
+}
+
+.box.menu button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ---------- The player ---------- */
+
+.work-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.stage {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#message {
+  margin: 12px 16px;
+}
+
+#player {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  background: #000;
+  cursor: pointer;
+}
+
+/* In full screen the stage is on its own, so it needs its own background. */
+.stage:fullscreen {
+  background: var(--bg1);
+}
+
+/* ---------- The buttons under the picture ---------- */
+
+.transport {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px 4px;
+  background: var(--bg0);
+}
+
+.timecode {
+  color: var(--dim);
+  font: 13px/1 Consolas, monospace;
+}
+
+.timecode.now {
+  color: var(--text);
+}
+
+.transport-buttons,
+.transport-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.transport-right {
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.transport button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.transport button:hover {
+  background: var(--bg3);
+}
+
+.transport svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.transport .play {
+  width: 38px;
+  height: 38px;
+}
+
+.transport .play svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Each of these two buttons holds both of its pictures and shows one. */
+.play .pause-icon,
+.play.playing .play-icon,
+#mute .muted-icon,
+#mute.muted .sound-icon {
+  display: none;
+}
+
+.play.playing .pause-icon,
+#mute.muted .muted-icon {
+  display: block;
+}
+
+/* The menus (speed, which moments to show, their order) and the boxes to type in. */
+select,
+textarea,
+input[type="text"],
+input[type="search"],
+input[type="number"] {
+  height: 28px;
+  min-width: 0;
+  padding: 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg1);
+  color: var(--text);
+  font: inherit;
+}
+
+input[type="text"],
+input[type="search"] {
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+}
+
+textarea {
+  display: block;
+  width: 100%;
+  height: auto;
+  padding: 6px 8px;
+  resize: none;
+}
+
+#volume {
+  width: 80px;
+  height: 4px;
+  accent-color: var(--text);
+}
+
+/* ---------- The strip of the whole video ---------- */
+
+.timeline {
+  padding: 0 12px 10px;
+  background: var(--bg0);
+  user-select: none;
+}
+
+.timeline-main {
+  position: relative;
+  cursor: pointer;
+  touch-action: none;
+}
+
+#timeline-ruler {
+  display: block;
+  width: 100%;
+  height: 20px;
+}
+
+.timeline-track {
+  position: relative;
+  height: 30px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--well);
+}
+
+/* Where nobody speaks: breaks, loading screens, dead air. */
+#timeline-quiet i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(135deg, transparent 0 4px, rgba(255, 255, 255, 0.08) 4px 8px);
+}
+
+/* How busy the chat is. */
+#timeline-chat {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.timeline-played {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* From where the selected moment starts to where it ends. Its two edges can be dragged. */
+.timeline-range {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.14);
+  pointer-events: none;
+}
+
+.timeline-range .handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  border: 0 solid #fff;
+  cursor: ew-resize;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* Each sits just outside its end of the band, so the two never cover each other. */
+.timeline-range .handle[data-edge="start"] {
+  right: 100%;
+  border-right-width: 2px;
+}
+
+.timeline-range .handle[data-edge="end"] {
+  left: 100%;
+  border-left-width: 2px;
+}
+
+.marker {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  width: 4px;
+  margin-left: -2px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.marker:hover {
+  top: 1px;
+  bottom: 1px;
+  width: 6px;
+  margin-left: -3px;
+}
+
+/* The colour of each kind of sign: on the strip, in the list's bars and
+   dots, and on the thin bar. Laugh is the orange they all start out with. */
+.marker.scream,
+.moment.scream .strength,
+.signs .scream,
+#timeline-overview-marks .scream {
+  background: var(--scream);
+}
+
+.marker.shout,
+.moment.shout .strength,
+.signs .shout,
+#timeline-overview-marks .shout {
+  background: var(--shout);
+}
+
+.marker.raised-voice,
+.moment.raised-voice .strength,
+.signs .raised-voice,
+#timeline-overview-marks .raised-voice {
+  background: var(--raised);
+}
+
+.marker.chat,
+.moment.chat .strength,
+.signs .chat,
+#timeline-overview-marks .chat {
+  background: var(--chat);
+}
+
+/* Moments the editor added by hand. */
+.marker.added,
+#timeline-overview-marks .added {
+  background: var(--text);
+}
+
+/* Kept moments stand full height with a dot on top, in their category's colour. */
+.marker.kept {
+  top: 0;
+  bottom: 0;
+}
+
+.marker .cap {
+  position: absolute;
+  top: 1px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  border: 1.5px solid var(--well);
+  border-radius: 50%;
+}
+
+.marker.rejected,
+#timeline-overview-marks .rejected {
+  opacity: 0.3;
+}
+
+.marker.selected {
+  outline: 1px solid #fff;
+  outline-offset: 1px;
+}
+
+.timeline-playhead,
+.timeline-hover {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  pointer-events: none;
+}
+
+.timeline-playhead {
+  background: #fff;
+}
+
+/* The small handle on top of the playhead line. */
+.timeline-playhead::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -4px;
+  border: 4.5px solid transparent;
+  border-top: 7px solid #fff;
+  border-bottom: 0;
+}
+
+.timeline-hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* The picture and the time of the point the mouse is at, above the strip. */
+.timeline-hover-card {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 3px 3px 1px;
+  border-radius: 6px;
+  background: #000;
+  font: 11px/1.4 Consolas, monospace;
+  white-space: pre;
+  transform: translateX(-50%);
+}
+
+#timeline-preview {
+  display: block;
+  width: 168px;
+  aspect-ratio: 16 / 9;
+  border-radius: 4px;
+  background: #000;
+}
+
+/* The thin bar: the whole video, with a frame around the part zoomed in on. */
+.timeline-overview {
+  position: relative;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 4px;
+  background: var(--well);
+  cursor: pointer;
+  touch-action: none;
+}
+
+#timeline-overview-marks i {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+
+.timeline-window {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  min-width: 6px;
+  border: 1px solid #6b7280;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+/* ---------- The panel beside the player: Moments and Transcript ---------- */
+
+.side {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  border-left: 1px solid var(--line);
+  background: var(--bg0);
+}
+
+.side-tabs {
+  display: flex;
+  gap: 16px;
+  padding: 12px 14px 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#moment-count {
+  margin-left: 4px;
+  font-weight: 400;
+}
+
+.panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The two menus side by side, the slider under them. */
+.moments-head {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+.sensitivity {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 8px;
+  color: var(--dim);
+  font-size: 11px;
+}
+
+.sensitivity input {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  accent-color: var(--text);
+}
+
+#save-problem {
+  margin: 0;
+  padding: 0 14px 8px;
+  font-size: 12px;
+}
+
+#analysis-status {
+  margin: 0;
+  padding: 0 14px 8px;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+#analysis-progress {
+  width: calc(100% - 28px);
+  height: 6px;
+  margin: 0 14px 10px;
+  accent-color: var(--accent);
+}
+
+#moment-list {
+  flex: 1;
+  margin: 0;
+  padding: 0 6px 10px;
+  overflow: auto;
+  list-style: none;
+}
+
+/* One moment: its time, a label, a dot for each further reason it was found,
+   a bar showing how strong it is, and a tick if it is kept. */
+.moment {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) auto 48px 12px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.moment:hover,
+.moment[aria-current] {
+  background: var(--bg3);
+}
+
+.moment .when {
+  font-family: Consolas, monospace;
+}
+
+.moment .label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The app's own label (Laugh, Shout...), quieter than a name the editor gave. */
+.moment .label.plain {
+  color: var(--dim);
+}
+
+/* The round mark of a category, in the lists and beside the Category box. */
+.dot,
+#category-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dot {
+  margin-right: 6px;
+}
+
+.signs {
+  display: flex;
+  gap: 3px;
+}
+
+.signs i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.strength {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.moment.kept::after {
+  content: "✓";
+  line-height: 1;
+}
+
+.moment.rejected {
+  opacity: 0.4;
+}
+
+.moment.rejected .when {
+  text-decoration: line-through;
+}
+
+/* ---------- The box for the selected moment ---------- */
+
+.inspector {
+  display: grid;
+  gap: 8px;
+  padding: 10px 14px 14px;
+  border-top: 1px solid var(--line);
+}
+
+.inspector-top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#inspector-kind {
+  flex: 1;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.inspector button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.inspector button:hover {
+  background: var(--bg3);
+}
+
+/* Keep and Reject stay lit while they apply to the selected moment. */
+.inspector button[aria-pressed="true"] {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg0);
+}
+
+.inspector svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.category-field {
+  position: relative;
+}
+
+#category-dot {
+  position: absolute;
+  top: 11px;
+  left: 10px;
+}
+
+#moment-category {
+  padding-left: 26px;
+}
+
+/* Where the moment starts and ends. Each time is a button that moves that
+   end to where the video is now. */
+.range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.inspector .range button {
+  width: auto;
+  height: 26px;
+  padding: 0 8px;
+  font: 12px/1 Consolas, monospace;
+}
+
+#range-length {
+  margin-left: auto;
+}
+
+/* ---------- The Transcript panel ---------- */
+
+.transcript-start {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.transcript-start p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.transcript-start progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--accent);
+}
+
+#transcript-problem {
+  margin: 0;
+  padding: 0 14px 8px;
+  font-size: 12px;
+}
+
+.transcript-ready {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding-top: 10px;
+}
+
+#transcript-search {
+  width: calc(100% - 28px);
+  margin: 0 14px;
+}
+
+#transcript-count {
+  margin: 0;
+  padding: 6px 14px 0;
+  font-size: 12px;
+}
+
+#transcript-lines {
+  flex: 1;
+  margin: 8px 0 0;
+  padding: 0 6px 10px;
+  overflow: auto;
+  list-style: none;
+}
+
+/* A long stream has thousands of lines. This lets the browser part skip
+   laying out the ones that are scrolled out of sight. */
+#transcript-lines li {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 32px;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.line:hover {
+  background: var(--bg3);
+}
+
+.line .when {
+  color: var(--dim);
+  font-family: Consolas, monospace;
+}

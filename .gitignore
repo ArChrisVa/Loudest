@@ -1,0 +1,8 @@
+node_modules/
+dist/
+
+# Kept on the author's PC only: working notes, and tests that need a local
+# test video.
+CLAUDE.md
+tests/
+icon/banner-options.png

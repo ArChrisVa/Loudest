@@ -13,7 +13,8 @@ Loudest listens to an hours-long stream recording and finds the moments worth ed
 ## Good to know
 
 - Your videos stay on your PC.
+- All the code is on this page, so anyone can check what it does.
 - Paste the stream's YouTube or Twitch link to use its chat as well.
 - **Installing:** Windows shows a blue warning for apps it does not know. Click **More info**, then **Run anyway**.
 
-<sub>Built on FFmpeg and other open-source work. Their licences and source code: [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt)</sub>
+<sub>Licence: [FSL-1.1-MIT](LICENSE). Free to use, share and change, not to be sold. Built on FFmpeg and other open-source work; their licences and source code are in [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).</sub>

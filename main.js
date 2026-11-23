@@ -1,0 +1,723 @@
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
+const { pathToFileURL } = require('node:url');
+const { app, BrowserWindow, clipboard, dialog, ipcMain, utilityProcess } = require('electron');
+const { findMoments, findQuiet, probeVideo } = require('./analysis');
+const { readChatFile, findChatSpikes, chatDensity } = require('./chat');
+const { downloadChat, cancelDownload } = require('./chat-download');
+const { transcribe, cancelTranscribe, canTranscribe } = require('./transcribe');
+const { resolveEdl, premiereXml, cutClips, cancelClips } = require('./exporters');
+
+const dataFolder = app.getPath('userData');
+
+// The helper programs and the speech model that are downloaded the first
+// time they are needed, instead of making the installer carry them.
+const toolsFolder = path.join(dataFolder, 'tools');
+const speechFolder = path.join(dataFolder, 'speech');
+
+// Every video that has been opened is remembered in this one file, so the
+// Home screen can list them again the next day.
+const recentFile = path.join(dataFolder, 'recent.json');
+
+// What was worked out about each video, one file per video in each folder.
+// All of it can be worked out again from the video (or downloaded again):
+const analysisFolder = path.join(dataFolder, 'analysis'); // what the sound-recognition model heard
+const chatFolder = path.join(dataFolder, 'chat'); // the stream's chat
+const transcriptFolder = path.join(dataFolder, 'transcripts'); // what was said, as text
+
+// The editor's own work on each video, one file per video: which moments they
+// kept or rejected, the names, notes and categories they gave them, where
+// they start and end, and the moments they added by hand. This cannot be
+// worked out again.
+const momentsFolder = path.join(dataFolder, 'moments');
+
+// The colour of each category, so a category looks the same in every video.
+const categoriesFile = path.join(dataFolder, 'categories.json');
+
+// The few choices the editor makes once: how many moments to find, how
+// early a moment starts, and the language spoken in the videos.
+const settingsFile = path.join(dataFolder, 'settings.json');
+
+// Colours handed to new categories, in this order, each with the name
+// DaVinci Resolve gives the nearest marker colour. The first five do not look
+// like the colours of Laugh, Scream, Shout and Raised voice.
+const CATEGORY_COLOURS = [
+  ['#4c8dff', 'Blue'],
+  ['#45c46b', 'Green'],
+  ['#f0524f', 'Red'],
+  ['#f47fbe', 'Pink'],
+  ['#c9a26b', 'Sand'],
+  ['#35c9d9', 'Cyan'],
+  ['#f2c94c', 'Yellow'],
+  ['#a779f0', 'Purple'],
+];
+
+const STATUSES = ['', 'kept', 'rejected'];
+const LANGUAGES = ['el', 'en', 'auto'];
+
+function readJson(file, fallback) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    // No such file yet, or it cannot be read.
+    return fallback;
+  }
+}
+
+// Writes a temporary file and renames it over the real one, so a crash
+// halfway through cannot leave a half-written file behind.
+function writeJson(file, data) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const temporary = file + '.tmp';
+  fs.writeFileSync(temporary, JSON.stringify(data));
+  fs.renameSync(temporary, file);
+}
+
+// Where something about one video is saved inside `folder`. The file is named
+// after a fingerprint of the video's path, because a path cannot be a file name.
+function savedFile(folder, videoPath) {
+  const fingerprint = crypto.createHash('sha1').update(videoPath).digest('hex');
+  return path.join(folder, fingerprint + '.json');
+}
+
+function isVideoPath(value) {
+  return typeof value === 'string' && path.isAbsolute(value);
+}
+
+// Every request from the window names a video by its full path. Anything else is refused.
+function needVideoPath(value) {
+  if (!isVideoPath(value)) throw new Error('This needs the full path of a video file');
+}
+
+function tellWindow(channel, details) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) win.webContents.send(channel, details);
+  }
+}
+
+// ---------- The list of opened videos ----------
+
+function readRecent() {
+  const list = readJson(recentFile, []);
+  return Array.isArray(list) ? list.filter((entry) => typeof entry?.path === 'string') : [];
+}
+
+// What the window needs on top of what is stored: an address the player can
+// load, whether the file is still where it was, and how much of the editor's
+// work the video holds.
+function forWindow(entry) {
+  const moments = readSavedMoments(entry.path);
+  return {
+    ...entry,
+    url: pathToFileURL(entry.path).href,
+    missing: !fs.existsSync(entry.path),
+    saved: moments.length,
+    kept: moments.filter((moment) => moment.status === 'kept').length,
+  };
+}
+
+function isThumbnail(value) {
+  return typeof value === 'string'
+    && value.startsWith('data:image/jpeg;base64,')
+    && value.length < 200000;
+}
+
+ipcMain.handle('recent:list', () => {
+  const list = readRecent();
+  list.sort((a, b) => b.lastOpened - a.lastOpened);
+  return list.map(forWindow);
+});
+
+// Adds a video to the list, or updates the one already there, and marks it as
+// opened now. The length and picture are optional because they arrive a
+// moment after the video is first opened.
+ipcMain.handle('recent:save', (event, details) => {
+  const videoPath = details?.path;
+  needVideoPath(videoPath);
+
+  const list = readRecent();
+  let entry = list.find((item) => item.path === videoPath);
+  if (!entry) {
+    entry = { path: videoPath, name: path.basename(videoPath) };
+    list.push(entry);
+  }
+  if (Number.isFinite(details.duration)) entry.duration = details.duration;
+  if (isThumbnail(details.thumbnail)) entry.thumbnail = details.thumbnail;
+  entry.lastOpened = Date.now();
+
+  try {
+    writeJson(recentFile, list);
+  } catch (error) {
+    // The video should still open even if the list cannot be saved.
+    console.error('Could not save the list of recent videos:', error);
+  }
+  return forWindow(entry);
+});
+
+// Forgets a video and everything saved about it, including the editor's work.
+// The video file itself is not touched. The window asks before calling this
+// when there is work to lose.
+ipcMain.handle('recent:remove', (event, videoPath) => {
+  needVideoPath(videoPath);
+  writeJson(recentFile, readRecent().filter((entry) => entry.path !== videoPath));
+  for (const folder of [analysisFolder, chatFolder, transcriptFolder, momentsFolder]) {
+    fs.rmSync(savedFile(folder, videoPath), { force: true });
+  }
+  chatInMemory = { path: '', messages: [] };
+  unlisten(videoPath);
+});
+
+// ---------- Settings ----------
+
+function readSettings() {
+  const saved = readJson(settingsFile, {});
+  const within = (value, fallback, least, most) => (Number.isFinite(value) ? Math.min(most, Math.max(least, value)) : fallback);
+  return {
+    // From 0 (only the clearest moments) to 1 (weak ones too).
+    sensitivity: within(saved?.sensitivity, 0.5, 0, 1),
+    // How many seconds before a moment its clip starts, so what led up to it is seen.
+    leadIn: within(saved?.leadIn, 5, 0, 60),
+    // The language spoken in the videos, for the transcript: 'el', 'en', or
+    // 'auto' to have it worked out. Until the editor chooses, Greek on a PC
+    // that is set up for Greek.
+    language: LANGUAGES.includes(saved?.language)
+      ? saved.language
+      : app.getPreferredSystemLanguages().some((language) => language.startsWith('el')) ? 'el' : 'auto',
+  };
+}
+
+ipcMain.handle('settings:get', () => readSettings());
+
+ipcMain.handle('settings:set', (event, changes) => {
+  const { sensitivity, leadIn, language } = { ...readSettings(), ...changes };
+  writeJson(settingsFile, { sensitivity, leadIn, language });
+  // Read back, so that anything out of range comes back corrected.
+  return readSettings();
+});
+
+// ---------- The editor's work ----------
+
+// One saved moment with anything unexpected removed, or null for a record
+// that makes no sense. Used on the way in from the window and from disk.
+function cleanMoment(record) {
+  if (!Number.isFinite(record?.time) || record.time < 0) return null;
+  const text = (value, limit) => (typeof value === 'string' ? value.trim().slice(0, limit) : '');
+  const seconds = (value) => (Number.isFinite(value) && value >= 0 ? value : null);
+  return {
+    time: record.time,
+    kind: text(record.kind, 30) || 'Added',
+    name: text(record.name, 200),
+    category: text(record.category, 60),
+    note: text(record.note, 1000),
+    status: STATUSES.includes(record.status) ? record.status : '',
+    // Where the editor moved its start and end to; null where they did not.
+    start: seconds(record.start),
+    end: seconds(record.end),
+  };
+}
+
+function readSavedMoments(videoPath) {
+  const saved = readJson(savedFile(momentsFolder, videoPath), null);
+  return Array.isArray(saved?.moments) ? saved.moments.map(cleanMoment).filter(Boolean) : [];
+}
+
+// The categories in use across all videos, each with its colour.
+// A category exists for as long as some moment is in it: this gives a colour
+// to a name it has not seen before, and forgets names nothing uses any more.
+function readCategories() {
+  let files = [];
+  try {
+    files = fs.readdirSync(momentsFolder);
+  } catch {
+    // No work has been saved yet.
+  }
+  const inUse = new Set();
+  for (const file of files.filter((name) => name.endsWith('.json'))) {
+    const saved = readJson(path.join(momentsFolder, file), null);
+    const moments = Array.isArray(saved?.moments) ? saved.moments.map(cleanMoment).filter(Boolean) : [];
+    for (const moment of moments) {
+      if (moment.category) inUse.add(moment.category);
+    }
+  }
+
+  const known = readJson(categoriesFile, []);
+  const categories = (Array.isArray(known) ? known : []).filter(
+    (category) => inUse.has(category?.name) && typeof category.colour === 'string',
+  );
+  for (const name of inUse) {
+    if (categories.some((category) => category.name === name)) continue;
+    const unused = CATEGORY_COLOURS.find(([colour]) => !categories.some((category) => category.colour === colour));
+    // With more categories than colours, colours start to repeat.
+    const [colour] = unused ?? CATEGORY_COLOURS[categories.length % CATEGORY_COLOURS.length];
+    categories.push({ name, colour });
+  }
+
+  if (JSON.stringify(categories) !== JSON.stringify(known)) {
+    try {
+      writeJson(categoriesFile, categories);
+    } catch (error) {
+      // Only the colours are at stake; the names live with the moments.
+      console.error('Could not save the category colours:', error);
+    }
+  }
+  return categories;
+}
+
+ipcMain.handle('moments:load', (event, videoPath) => {
+  needVideoPath(videoPath);
+  return readSavedMoments(videoPath);
+});
+
+// Saves the editor's work on one video and answers with the categories that
+// are now in use. A failure here reaches the window, which tells the editor.
+ipcMain.handle('moments:save', (event, videoPath, records) => {
+  needVideoPath(videoPath);
+  if (!Array.isArray(records)) throw new Error('moments:save needs a list of moments');
+
+  const moments = records.map(cleanMoment).filter(Boolean);
+  if (moments.length === 0) {
+    fs.rmSync(savedFile(momentsFolder, videoPath), { force: true });
+  } else {
+    writeJson(savedFile(momentsFolder, videoPath), { path: videoPath, moments });
+  }
+  return readCategories();
+});
+
+ipcMain.handle('categories:list', () => readCategories());
+
+// Every kept moment of every video, newest video first, for the Home screen.
+ipcMain.handle('moments:kept', () => {
+  const videos = readRecent().sort((a, b) => b.lastOpened - a.lastOpened);
+  return videos.flatMap((video) =>
+    readSavedMoments(video.path)
+      .filter((moment) => moment.status === 'kept')
+      .sort((a, b) => a.time - b.time)
+      .map((moment) => ({ ...moment, path: video.path, video: video.name, missing: !fs.existsSync(video.path) })),
+  );
+});
+
+// ---------- Listening to videos, one at a time ----------
+
+// Videos waiting to be listened to, the next one first; the one being
+// listened to now; and who is waiting to hear that a video is done.
+const waiting = [];
+let listeningTo = null;
+const waiters = new Map(); // video path -> functions to call with the outcome
+let closing = false;
+
+// What was heard in a video last time, or null when there is nothing saved
+// or the video file has changed since (different size or date).
+function readSavedHearing(videoPath) {
+  let stats;
+  try {
+    stats = fs.statSync(videoPath);
+  } catch {
+    return null;
+  }
+  const saved = readJson(savedFile(analysisFolder, videoPath), null);
+  const unchanged = saved?.size === stats.size && saved?.modified === stats.mtimeMs;
+  // `shout` was the last thing added; a result without it is listened to again.
+  return unchanged && Array.isArray(saved.heard?.shout) ? saved.heard : null;
+}
+
+function queueStatus() {
+  return { listening: listeningTo, waiting: [...waiting] };
+}
+
+// Takes a video out of the queue, stopping it if it is the one being
+// listened to, and tells whoever was waiting for it that it will not happen.
+function unlisten(videoPath) {
+  const place = waiting.indexOf(videoPath);
+  if (place !== -1) waiting.splice(place, 1);
+  for (const done of waiters.get(videoPath) ?? []) done({ cancelled: true });
+  waiters.delete(videoPath);
+  if (listeningTo === videoPath) stopListening();
+}
+
+// The listening is done by a helper process, started for one video and ended
+// when that video is done. (listen.js says why it is a process of its own.)
+let helper = null; // the one at work now
+let stoppedHelper = null; // the one that was last stopped on purpose
+
+// Stops the listening that is in progress, if there is one.
+function stopListening() {
+  stoppedHelper = helper;
+  helper?.kill();
+}
+
+// Has a helper listen to one video and resolves with what it heard. Rejects
+// with an error that has `cancelled` set if the listening was stopped.
+async function listenTo(videoPath) {
+  const child = utilityProcess.fork(path.join(__dirname, 'listen.js'));
+  helper = child;
+  try {
+    return await new Promise((resolve, reject) => {
+      child.on('message', (message) => {
+        if (message.seconds !== undefined) tellWindow('listen:progress', { path: videoPath, seconds: message.seconds });
+        else if (message.heard) resolve(message.heard);
+        else reject(new Error(message.error));
+      });
+      // It was stopped, or it has crashed. (After an answer this changes nothing.)
+      child.on('exit', () => {
+        reject(Object.assign(new Error('The listening helper ended early'), { cancelled: stoppedHelper === child }));
+      });
+      child.postMessage(videoPath);
+    });
+  } finally {
+    child.kill();
+    if (helper === child) helper = null;
+  }
+}
+
+// Listens to one video and saves what was heard. Answers {} when that is
+// done (or was done before), { error } with a sentence to show, or
+// { cancelled } when it was interrupted.
+async function hear(videoPath) {
+  if (!fs.existsSync(videoPath)) return { error: 'The video file is no longer where it was.' };
+  if (readSavedHearing(videoPath)) return {};
+
+  // The sound-recognition library is built on a free piece of Windows that
+  // most PCs have, because games and editing programs install it. Without it
+  // the helper would just die, so look for it first and say what to do.
+  const system = path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32');
+  if (!['msvcp140.dll', 'vcruntime140_1.dll'].every((file) => fs.existsSync(path.join(system, file)))) {
+    return { error: 'Listening needs a free piece of Windows that this PC is missing: the Microsoft Visual C++ Redistributable. Install it from aka.ms/vc14/vc_redist.x64.exe, then open the video again.' };
+  }
+
+  let heard;
+  try {
+    heard = await listenTo(videoPath);
+  } catch (error) {
+    if (error.cancelled) return { cancelled: true };
+    // ffmpeg's way of saying the file has no audio track.
+    if (/matches no streams/.test(error.message)) return { error: 'This video has no sound to listen to.' };
+    console.error('Could not listen to the video:', error);
+    return { error: 'The sound of this video could not be read.' };
+  }
+
+  try {
+    // Written directly: if a crash cuts this file short, the video is simply listened to again.
+    const stats = fs.statSync(videoPath);
+    fs.mkdirSync(analysisFolder, { recursive: true });
+    const saved = { path: videoPath, size: stats.size, modified: stats.mtimeMs, heard };
+    fs.writeFileSync(savedFile(analysisFolder, videoPath), JSON.stringify(saved));
+  } catch (error) {
+    console.error('Could not save what was heard:', error);
+    return { error: 'What was heard could not be saved. Check that the disk is not full.' };
+  }
+  return {};
+}
+
+// Works through the queue until it is empty. Calling it while it is already
+// at work does nothing.
+async function workThroughQueue() {
+  if (listeningTo) return;
+  while (waiting.length > 0 && !closing) {
+    const videoPath = waiting.shift();
+    listeningTo = videoPath;
+    tellWindow('queue:changed', queueStatus());
+
+    const outcome = await hear(videoPath);
+    listeningTo = null;
+    // Interrupted: whoever interrupted it has put it back in the queue if it is still wanted.
+    if (outcome.cancelled) continue;
+    for (const done of waiters.get(videoPath) ?? []) done(outcome);
+    waiters.delete(videoPath);
+  }
+  tellWindow('queue:changed', queueStatus());
+}
+
+// Used when a video is opened: it is listened to before anything else, and
+// whatever was being listened to goes back to wait its turn. Answers when
+// the video has been listened to: {} or { error }.
+ipcMain.handle('listen:now', (event, videoPath) => {
+  needVideoPath(videoPath);
+  if (readSavedHearing(videoPath)) return {};
+
+  return new Promise((resolve) => {
+    waiters.set(videoPath, [...(waiters.get(videoPath) ?? []), resolve]);
+    if (listeningTo !== videoPath) {
+      const place = waiting.indexOf(videoPath);
+      if (place !== -1) waiting.splice(place, 1);
+      if (listeningTo) waiting.unshift(listeningTo);
+      waiting.unshift(videoPath);
+      if (listeningTo) stopListening();
+    }
+    workThroughQueue();
+  });
+});
+
+// Used when several videos are added at once: they are listened to in turn.
+ipcMain.handle('queue:add', (event, videoPaths) => {
+  for (const videoPath of Array.isArray(videoPaths) ? videoPaths.filter(isVideoPath) : []) {
+    const known = videoPath === listeningTo || waiting.includes(videoPath);
+    if (!known && !readSavedHearing(videoPath)) waiting.push(videoPath);
+  }
+  workThroughQueue();
+  return queueStatus();
+});
+
+ipcMain.handle('queue:status', () => queueStatus());
+
+// ---------- Finding the moments ----------
+
+const NOTHING_HEARD = { laugh: [], scream: [], shout: [], music: [], speech: [], sharp: [], level: [] };
+
+// The chat that was read last. A busy stream's chat is a big file, and the
+// moments are asked for again every time the slider moves.
+let chatInMemory = { path: '', messages: [] };
+
+function readChat(videoPath) {
+  if (chatInMemory.path !== videoPath) {
+    const saved = readJson(savedFile(chatFolder, videoPath), null);
+    chatInMemory = { path: videoPath, messages: Array.isArray(saved?.messages) ? saved.messages : [] };
+  }
+  return chatInMemory.messages;
+}
+
+// The moments found in a video, from what was heard in it and from its chat
+// if it has one. `sensitivity` runs from 0 (only the clearest moments) to 1
+// (weak ones too). Fast: it works from what is already saved, so it can be
+// asked again whenever something changes.
+// Answers { moments, quiet, chat }:
+//   quiet   stretches where nobody speaks
+//   chat    null, or how many messages there are and how busy they are along the video
+ipcMain.handle('moments:find', (event, videoPath, wanted) => {
+  needVideoPath(videoPath);
+  const sensitivity = Number.isFinite(wanted) ? Math.min(1, Math.max(0, wanted)) : 0.5;
+  const heard = readSavedHearing(videoPath);
+  const chat = readChat(videoPath);
+  const duration = (heard?.laugh.length ?? 0) * 0.48;
+  // A chat can run on after the video ends (a recording that was cut short,
+  // or the link of another stream). What was written past the end points at nothing.
+  const messages = duration ? chat.filter(([seconds]) => seconds <= duration) : chat;
+
+  return {
+    moments: findMoments(heard ?? NOTHING_HEARD, { sensitivity, chatSpikes: findChatSpikes(messages, sensitivity) }),
+    quiet: heard ? findQuiet(heard) : [],
+    chat: chat.length ? { count: chat.length, density: chatDensity(messages, duration) } : null,
+  };
+});
+
+// ---------- The chat ----------
+
+function saveChat(videoPath, messages) {
+  writeJson(savedFile(chatFolder, videoPath), { path: videoPath, messages });
+  chatInMemory = { path: videoPath, messages };
+  return { count: messages.length };
+}
+
+// A video downloaded with yt-dlp has the stream's code in its name, like
+// "Title [hRf348Iw1kc].mp4". That is enough to know the stream's link.
+ipcMain.handle('chat:guessLink', (event, videoPath) => {
+  needVideoPath(videoPath);
+  const code = /\[([A-Za-z0-9_-]{11})\]\.[^.]+$/.exec(path.basename(videoPath));
+  return code ? `https://www.youtube.com/watch?v=${code[1]}` : '';
+});
+
+// Reads a chat file the editor already has. Answers { count } or { error }.
+ipcMain.handle('chat:fromFile', async (event, videoPath, chatPath) => {
+  needVideoPath(videoPath);
+  needVideoPath(chatPath);
+  try {
+    return saveChat(videoPath, await readChatFile(chatPath));
+  } catch (error) {
+    console.error('Could not read the chat file:', error);
+    return { error: 'No chat messages were found in that file.' };
+  }
+});
+
+// Downloads the chat of the stream at `link`. Answers { count }, { error } or { cancelled }.
+ipcMain.handle('chat:fromLink', async (event, videoPath, link) => {
+  needVideoPath(videoPath);
+  let address;
+  try {
+    address = new URL(String(link).trim());
+  } catch {
+    return { error: 'That does not look like a link.' };
+  }
+  if (!['http:', 'https:'].includes(address.protocol)) return { error: 'That does not look like a link.' };
+
+  try {
+    return saveChat(videoPath, await downloadChat(address, toolsFolder));
+  } catch (error) {
+    if (error.cancelled) return { cancelled: true };
+    console.error('Could not get the chat:', error);
+    return { error: error.friendly ?? 'The chat could not be downloaded.' };
+  }
+});
+
+ipcMain.handle('chat:cancel', () => cancelDownload());
+
+ipcMain.handle('chat:remove', (event, videoPath) => {
+  needVideoPath(videoPath);
+  fs.rmSync(savedFile(chatFolder, videoPath), { force: true });
+  chatInMemory = { path: '', messages: [] };
+});
+
+// ---------- The transcript ----------
+
+// What was said in a video, if it was written out before: { lines }, where
+// each line is [start, end, text]. Null if not.
+ipcMain.handle('transcript:load', (event, videoPath) => {
+  needVideoPath(videoPath);
+  const saved = readJson(savedFile(transcriptFolder, videoPath), null);
+  return Array.isArray(saved?.lines) ? { lines: saved.lines } : null;
+});
+
+ipcMain.handle('transcript:possible', () => canTranscribe());
+
+// Writes out what is said in a video, in the language chosen in the
+// settings. This takes a long time; progress goes to the window as
+// { path, step, fraction }, where `step` is 'model' while the speech model
+// is being downloaded and 'speech' after that.
+// Answers { lines }, { error } or { cancelled }.
+ipcMain.handle('transcript:run', async (event, videoPath) => {
+  needVideoPath(videoPath);
+  try {
+    const lines = await transcribe(videoPath, {
+      language: readSettings().language,
+      folder: speechFolder,
+      // Only the stretches where someone speaks are written out.
+      heard: readSavedHearing(videoPath),
+      onProgress: (step, fraction) => tellWindow('transcript:progress', { path: videoPath, step, fraction }),
+    });
+    writeJson(savedFile(transcriptFolder, videoPath), { path: videoPath, lines });
+    return { lines };
+  } catch (error) {
+    if (error.cancelled) return { cancelled: true };
+    console.error('Could not write out the speech:', error);
+    return { error: error.friendly ?? 'The speech could not be written out.' };
+  }
+});
+
+ipcMain.handle('transcript:cancel', () => cancelTranscribe());
+
+// ---------- Exporting ----------
+
+// A moment as the window sends it for exporting, with anything unexpected
+// removed: { start, end, name, note, category, kind }.
+function cleanExport(record) {
+  if (!Number.isFinite(record?.start) || !Number.isFinite(record?.end) || record.start < 0 || record.end <= record.start) {
+    return null;
+  }
+  const text = (value, limit) => (typeof value === 'string' ? value.trim().slice(0, limit) : '');
+  return {
+    start: record.start,
+    end: record.end,
+    name: text(record.name, 200) || 'Moment',
+    note: text(record.note, 1000),
+    category: text(record.category, 60),
+    kind: text(record.kind, 30),
+  };
+}
+
+// The colour a moment's marker gets in the editing program: its category's
+// colour, by the name Resolve knows it under, or '' if it has no category.
+function colourNames() {
+  const names = new Map(CATEGORY_COLOURS);
+  return new Map(readCategories().map((category) => [category.name, names.get(category.colour) ?? '']));
+}
+
+function windowOf(event) {
+  return BrowserWindow.fromWebContents(event.sender);
+}
+
+// Writes the moments as markers for an editing program. `format` is
+// 'resolve' (an EDL of markers) or 'premiere' (a timeline with the video on
+// it and the markers above). Answers { saved: path }, { cancelled } or { error }.
+ipcMain.handle('export:markers', async (event, videoPath, format, list) => {
+  needVideoPath(videoPath);
+  const moments = (Array.isArray(list) ? list : []).map(cleanExport).filter(Boolean);
+  if (moments.length === 0) return { error: 'There are no moments to export.' };
+
+  const base = path.join(path.dirname(videoPath), path.parse(videoPath).name);
+  const choice = await dialog.showSaveDialog(windowOf(event), format === 'resolve'
+    ? { defaultPath: base + ' markers.edl', filters: [{ name: 'Markers for DaVinci Resolve', extensions: ['edl'] }] }
+    : { defaultPath: base + ' moments.xml', filters: [{ name: 'Timeline for Premiere Pro', extensions: ['xml'] }] });
+  if (choice.canceled) return { cancelled: true };
+
+  try {
+    const video = await probeVideo(videoPath);
+    const colours = colourNames();
+    const text = format === 'resolve'
+      ? resolveEdl(moments, video, colours)
+      : premiereXml(moments, { ...video, path: videoPath }, colours);
+    fs.writeFileSync(choice.filePath, text);
+    return { saved: choice.filePath };
+  } catch (error) {
+    console.error('Could not export the markers:', error);
+    return { error: 'The file could not be written.' };
+  }
+});
+
+// Cuts each moment out of the video as its own file, without re-encoding.
+// Answers { folder, count }, { cancelled } or { error }.
+ipcMain.handle('export:clips', async (event, videoPath, list) => {
+  needVideoPath(videoPath);
+  const moments = (Array.isArray(list) ? list : []).map(cleanExport).filter(Boolean);
+  if (moments.length === 0) return { error: 'There are no moments to export.' };
+
+  const choice = await dialog.showOpenDialog(windowOf(event), {
+    title: 'Choose a folder for the clips',
+    defaultPath: path.dirname(videoPath),
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  if (choice.canceled) return { cancelled: true };
+
+  try {
+    const folder = await cutClips(videoPath, moments, choice.filePaths[0], (done) => {
+      tellWindow('clips:progress', { done, total: moments.length });
+    });
+    return { folder, count: moments.length };
+  } catch (error) {
+    if (error.cancelled) return { cancelled: true };
+    console.error('Could not cut the clips:', error);
+    return { error: 'The clips could not be written to that folder.' };
+  }
+});
+
+// Puts text on the clipboard, for pasting somewhere else.
+ipcMain.handle('clipboard:write', (event, text) => {
+  clipboard.writeText(String(text).slice(0, 200000));
+});
+
+// ---------- The window ----------
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 1200,
+    height: 760,
+    // Below this the player's buttons no longer fit beside the Moments list.
+    minWidth: 960,
+    minHeight: 560,
+    // Shown in the title bar and taskbar. Built from __dirname so it is
+    // found no matter which folder the app is started from.
+    icon: path.join(__dirname, 'icon.ico'),
+    webPreferences: { preload: path.join(__dirname, 'preload.js') },
+  });
+
+  // Without this, dropping a file anywhere on the window makes Electron
+  // navigate away from the app and show the file itself.
+  win.webContents.on('will-navigate', (event) => event.preventDefault());
+
+  win.loadFile('index.html');
+}
+
+// The name Windows knows the app by. It is the same as the installer's, so
+// the taskbar keeps the running app and its pinned shortcut together.
+app.setAppUserModelId('com.loudest.app');
+
+app.whenReady().then(createWindow);
+
+app.on('window-all-closed', () => {
+  // Do not leave any of the helper programs running after the window is gone.
+  closing = true;
+  waiting.length = 0;
+  stopListening();
+  cancelDownload();
+  cancelTranscribe();
+  cancelClips();
+  app.quit();
+});

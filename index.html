@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:"
+    >
+    <title>Loudest</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <!-- The tile on the Home screen and the Chat box click these for you. -->
+    <input type="file" id="file" accept="video/*,.mkv" multiple hidden>
+    <input type="file" id="chat-file" accept=".json,.txt,.log,.csv" hidden>
+
+    <main id="home">
+      <div class="home-tabs">
+        <button type="button" id="tab-recent" aria-pressed="true">Recent VODs</button>
+        <button type="button" id="tab-kept" aria-pressed="false">Kept moments</button>
+      </div>
+      <p id="home-message" role="alert"></p>
+
+      <ul id="recent" class="grid">
+        <li>
+          <button type="button" id="open-video" class="new-tile">
+            <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+            <b>Drop videos here</b>
+            <span>or click to choose</span>
+          </button>
+        </li>
+      </ul>
+
+      <!-- Every kept moment of every video. home.js fills this in. -->
+      <div id="kept" hidden>
+        <select id="kept-category" title="Which category to show" aria-label="Which category to show" hidden></select>
+        <p id="kept-empty" class="dim" hidden>No kept moments yet.</p>
+        <div id="kept-groups"></div>
+      </div>
+    </main>
+
+    <div id="work" hidden>
+      <header class="work-bar">
+        <button type="button" id="back" class="btn" title="Home" aria-label="Home">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 11l8-7 8 7M6 10v9h12v-9"/></svg>
+        </button>
+        <span id="work-title"></span>
+        <div class="work-tools">
+          <button type="button" id="chat-button" class="btn" popovertarget="chat-box" title="Chat" aria-label="Chat">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-7l-5 4v-4H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>
+          </button>
+          <button type="button" id="settings-button" class="btn" popovertarget="settings-box" title="Settings" aria-label="Settings">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9M15 4.5v5M9 14.5v5"/></svg>
+          </button>
+          <button type="button" id="export-button" class="btn" popovertarget="export-box" title="Export" aria-label="Export">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 4v11M8 11l4 4 4-4M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- The three small boxes that open under the buttons above. -->
+      <div id="chat-box" class="box" popover>
+        <div id="chat-none" class="box-rows">
+          <div class="box-row">
+            <input type="text" id="chat-link" placeholder="Link to the stream" aria-label="Link to the stream" autocomplete="off" spellcheck="false">
+            <button type="button" id="chat-get" class="btn">Get chat</button>
+          </div>
+          <button type="button" id="chat-choose" class="btn">Use a chat file</button>
+        </div>
+        <div id="chat-have" class="box-row" hidden>
+          <span id="chat-count"></span>
+          <button type="button" id="chat-remove" class="btn">Remove</button>
+        </div>
+        <p id="chat-status" role="status"></p>
+      </div>
+
+      <div id="settings-box" class="box" popover>
+        <label class="box-row">
+          Start each moment
+          <input type="number" id="lead-in" min="0" max="60" step="1">
+          seconds early
+        </label>
+      </div>
+
+      <div id="export-box" class="box menu" popover>
+        <p id="export-what"></p>
+        <button type="button" data-export="resolve">Markers for DaVinci Resolve</button>
+        <button type="button" data-export="premiere">Timeline for Premiere Pro</button>
+        <button type="button" data-export="timestamps">Copy as YouTube timestamps</button>
+        <button type="button" data-export="clips">Clips, cut without re-encoding</button>
+        <p id="export-status" role="status"></p>
+      </div>
+
+      <div class="work-body">
+        <div class="stage" id="stage">
+          <p id="message" role="alert"></p>
+          <video id="player"></video>
+
+          <!-- The buttons under the picture. Each has a keyboard key, shown when you point at it. -->
+          <div class="transport">
+            <span id="time-now" class="timecode now">0:00:00</span>
+            <div class="transport-buttons">
+              <button type="button" id="previous-moment" title="Previous moment (Up)" aria-label="Previous moment">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M18 6l-9 6 9 6z"/></svg>
+              </button>
+              <button type="button" id="skip-back" title="Back 5 seconds (Left)" aria-label="Back 5 seconds">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6l-6 6 6 6M19 6l-6 6 6 6"/></svg>
+              </button>
+              <button type="button" id="play" class="play" title="Play or pause (Space)" aria-label="Play or pause">
+                <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>
+                <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+              </button>
+              <button type="button" id="skip-forward" title="Forward 5 seconds (Right)" aria-label="Forward 5 seconds">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 6l6 6-6 6M5 6l6 6-6 6"/></svg>
+              </button>
+              <button type="button" id="next-moment" title="Next moment (Down)" aria-label="Next moment">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M6 6l9 6-9 6z"/></svg>
+              </button>
+              <button type="button" id="add-moment" title="Add a moment here (M)" aria-label="Add a moment here">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 4h11v10.5L12 20l-5.5-5.5zM12 8v5M9.5 10.5h5"/></svg>
+              </button>
+            </div>
+            <div class="transport-right">
+              <select id="speed" title="Playback speed" aria-label="Playback speed">
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1×</option>
+                <option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option>
+                <option value="2">2×</option>
+              </select>
+              <button type="button" id="mute" title="Mute" aria-label="Mute">
+                <svg class="sound-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16.5 9a4 4 0 0 1 0 6"/></svg>
+                <svg class="muted-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16 9.5l5 5M21 9.5l-5 5"/></svg>
+              </button>
+              <input type="range" id="volume" min="0" max="1" step="0.05" value="1" title="Volume" aria-label="Volume">
+              <button type="button" id="fullscreen" title="Full screen (F)" aria-label="Full screen">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+              </button>
+              <span id="time-total" class="timecode">0:00:00</span>
+            </div>
+          </div>
+
+          <!-- The whole video as a strip. The Moments list and the keyboard offer
+               the same jumps and changes, so this is hidden from screen readers. -->
+          <div id="timeline" class="timeline" aria-hidden="true">
+            <div id="timeline-main" class="timeline-main">
+              <canvas id="timeline-ruler"></canvas>
+              <div id="timeline-track" class="timeline-track">
+                <div id="timeline-quiet"></div>
+                <canvas id="timeline-chat"></canvas>
+                <div id="timeline-played" class="timeline-played"></div>
+                <div id="timeline-range" class="timeline-range" hidden>
+                  <i class="handle" data-edge="start"></i>
+                  <i class="handle" data-edge="end"></i>
+                </div>
+                <div id="timeline-markers"></div>
+              </div>
+              <div id="timeline-hover" class="timeline-hover" hidden>
+                <div id="timeline-hover-card" class="timeline-hover-card">
+                  <video id="timeline-preview" muted preload="metadata"></video>
+                  <span id="timeline-hover-time"></span>
+                </div>
+              </div>
+              <div id="timeline-playhead" class="timeline-playhead"></div>
+            </div>
+            <div id="timeline-overview" class="timeline-overview">
+              <div id="timeline-overview-marks"></div>
+              <div id="timeline-window" class="timeline-window"></div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="side">
+          <div class="side-tabs">
+            <button type="button" id="tab-moments" aria-pressed="true">Moments <span id="moment-count"></span></button>
+            <button type="button" id="tab-transcript" aria-pressed="false">Transcript</button>
+          </div>
+
+          <section id="moments-panel" class="panel">
+            <div class="moments-head">
+              <select id="show" title="Which moments to show" aria-label="Which moments to show">
+                <option value="all">All</option>
+                <option value="review">To review</option>
+                <option value="kept">Kept</option>
+                <option value="rejected">Rejected</option>
+                <optgroup label="Found by" id="kind-options">
+                  <option value="kind:Laugh">Laugh</option>
+                  <option value="kind:Scream">Scream</option>
+                  <option value="kind:Shout">Shout</option>
+                  <option value="kind:Raised voice">Raised voice</option>
+                  <option value="kind:Chat" id="chat-option">Chat</option>
+                  <option value="kind:Added">Added by you</option>
+                </optgroup>
+                <!-- work.js fills this in, and takes it out while there are no categories. -->
+                <optgroup label="Category" id="category-options"></optgroup>
+              </select>
+              <select id="sort" title="Order of the list" aria-label="Order of the list">
+                <option value="strength">Strongest first</option>
+                <option value="time">By time</option>
+              </select>
+              <label class="sensitivity" title="How many moments to find">
+                <span>Fewer</span>
+                <input type="range" id="sensitivity" min="0" max="1" step="0.05" aria-label="How many moments to find">
+                <span>More</span>
+              </label>
+            </div>
+            <p id="analysis-status" role="status"></p>
+            <progress id="analysis-progress" hidden></progress>
+            <p id="save-problem" role="alert"></p>
+            <ol id="moment-list"></ol>
+
+            <!-- The selected moment: keep or reject it, name it, put it in a
+                 category, write a note, and set where it starts and ends. -->
+            <div id="inspector" class="inspector" hidden>
+              <div class="inspector-top">
+                <span id="inspector-kind"></span>
+                <button type="button" id="keep" title="Keep, and go to the next (A)" aria-label="Keep" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+                </button>
+                <button type="button" id="reject" title="Reject, and go to the next (X)" aria-label="Reject" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+                </button>
+              </div>
+              <input type="text" id="moment-name" placeholder="Name" aria-label="Name" maxlength="200" autocomplete="off">
+              <div class="category-field">
+                <i id="category-dot"></i>
+                <input type="text" id="moment-category" list="category-names" placeholder="Category" aria-label="Category" maxlength="60" autocomplete="off">
+              </div>
+              <datalist id="category-names"></datalist>
+              <textarea id="moment-note" placeholder="Note" aria-label="Note" rows="2" maxlength="1000"></textarea>
+              <div class="range">
+                <button type="button" id="set-start" title="Start it where the video is now (I)" aria-label="Start the moment where the video is now"></button>
+                <span>to</span>
+                <button type="button" id="set-end" title="End it where the video is now (O)" aria-label="End the moment where the video is now"></button>
+                <span id="range-length"></span>
+              </div>
+            </div>
+          </section>
+
+          <section id="transcript-panel" class="panel" hidden>
+            <div id="transcript-start" class="transcript-start">
+              <select id="speech-language" title="The language spoken in the video" aria-label="The language spoken in the video">
+                <option value="el">Greek</option>
+                <option value="en">English</option>
+                <option value="auto">Another language</option>
+              </select>
+              <button type="button" id="transcribe" class="btn">Write out what is said</button>
+              <p id="transcript-note" class="dim"></p>
+            </div>
+            <div id="transcript-working" class="transcript-start" hidden>
+              <p id="transcript-status" role="status"></p>
+              <progress id="transcript-progress"></progress>
+              <button type="button" id="transcribe-cancel" class="btn">Cancel</button>
+            </div>
+            <p id="transcript-problem" role="alert"></p>
+            <div id="transcript-ready" class="transcript-ready" hidden>
+              <input type="search" id="transcript-search" placeholder="Search" aria-label="Search what was said" autocomplete="off">
+              <p id="transcript-count" class="dim" role="status"></p>
+              <ol id="transcript-lines"></ol>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <!-- One card on the Home screen. home.js copies this for each video. -->
+    <template id="card-template">
+      <li class="card">
+        <button type="button" class="card-open">
+          <span class="thumb"><img alt=""><span class="dur"></span></span>
+          <span class="card-title"></span>
+          <span class="card-meta"></span>
+        </button>
+        <button type="button" class="card-remove" title="Remove from this list">&times;</button>
+      </li>
+    </template>
+
+    <script src="timeline.js"></script>
+    <script src="home.js"></script>
+    <script src="player.js"></script>
+    <script src="work.js"></script>
+    <script src="extras.js"></script>
+  </body>
+</html>
