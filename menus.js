@@ -1,4 +1,5 @@
-// The File, View and Help menus in the top bar, and the keys that go with them.
+// The File, Edit, Moment, View and Help menus in the top bar, the menu a
+// right-click on a moment opens, and the keys that go with them.
 //
 // A menu is one of the page's own pop-up boxes (the "popover" in index.html):
 // the browser opens it from its word in the bar, and closes it on Escape or
@@ -8,6 +9,9 @@
 
 const menuButtons = [...document.querySelectorAll('.menubar > button')];
 const menus = menuButtons.map((button) => button.popoverTargetElement);
+// The menu a right-click on a moment opens (work.js) is made of the same
+// items and works the same way; it only has no word in the bar.
+const contextMenu = document.getElementById('moment-context');
 const shortcutsBox = document.getElementById('shortcuts-box');
 const helpMenu = document.getElementById('help-menu');
 const versionLine = document.getElementById('version');
@@ -32,6 +36,12 @@ const MENU_DOES = {
   smaller: () => resize('smaller'),
   normal: () => resize('normal'),
   home: showHome,
+  undo,
+  redo,
+  clear: clearDecision,
+  name: nameMoment,
+  zoom: zoomToSelected,
+  whole: () => timeline.showAll(),
   exit: () => window.close(),
   shortcuts: () => shortcutsBox.showPopover(),
   // The newest notes there are (whats-new.js).
@@ -48,12 +58,16 @@ const MENU_DOES = {
 const buttonOf = (item) => document.getElementById(item.dataset.press);
 
 // Whether an item can be used right now: its button is there and not switched
-// off, a video is open if it needs one, and Loudest is not already looking
-// for an update if that is what it asks for.
+// off, a video is open if it needs one, a moment is selected if it is about
+// one, there is something to undo, and Loudest is not already looking for an
+// update if that is what it asks for.
 function canDo(item) {
   const button = buttonOf(item);
   if (button && (button.hidden || button.disabled)) return false;
   if (item.dataset.do === 'check' && ['checking', 'downloading'].includes(update.state)) return false;
+  if ('needsMoment' in item.dataset && !selected) return false;
+  if (item.dataset.do === 'undo') return !work.hidden && undoSteps.length > 0;
+  if (item.dataset.do === 'redo') return !work.hidden && redoSteps.length > 0;
   // No bigger than the screen has room for, and no smaller than normal.
   if (item.dataset.do === 'bigger' && !size.bigger) return false;
   if (['smaller', 'normal'].includes(item.dataset.do) && !size.smaller) return false;
@@ -96,13 +110,20 @@ function doItem(item) {
 // The items of a menu that the arrow keys stop at.
 const usableItems = (menu) => [...menu.querySelectorAll('[role="menuitem"]')].filter((item) => !item.disabled && item.checkVisibility());
 
-for (const menu of menus) {
+// The menus whose word is in the bar right now (Moment is not, on Home).
+const menusInBar = () => menus.filter((menu, n) => menuButtons[n].checkVisibility());
+
+for (const menu of [...menus, contextMenu]) {
   // Each time a menu opens, its items are brought up to date.
   menu.addEventListener('beforetoggle', (event) => {
     if (event.newState === 'open') refreshMenu(menu);
   });
+  // The keyboard goes to the first item that can be used, or to the menu
+  // itself when none can (Edit, with nothing to undo), so that the arrow
+  // keys still move on to the next menu.
+  menu.tabIndex = -1;
   menu.addEventListener('toggle', (event) => {
-    if (event.newState === 'open') usableItems(menu)[0]?.focus();
+    if (event.newState === 'open') (usableItems(menu)[0] ?? menu).focus();
   });
 
   menu.addEventListener('click', (event) => {
@@ -124,8 +145,10 @@ for (const menu of menus) {
     const beside = { ArrowLeft: -1, ArrowRight: 1 }[event.code];
     if (event.code === 'ArrowDown') items[(at + 1) % items.length]?.focus();
     else if (event.code === 'ArrowUp') items[(at - 1 + items.length) % items.length]?.focus();
-    else if (beside) menus[(menus.indexOf(menu) + beside + menus.length) % menus.length].showPopover();
-    else return;
+    else if (beside && menus.includes(menu)) {
+      const row = menusInBar();
+      row[(row.indexOf(menu) + beside + row.length) % row.length].showPopover();
+    } else return;
     event.preventDefault();
   });
 }
@@ -138,30 +161,34 @@ for (const button of menuButtons) {
   });
 }
 
-// Ctrl with a key does the item that names it, and Alt with F, V or H opens
-// that menu, as in other Windows programs. Keys are named by where they sit
+// Ctrl with a key does the item that names it (with Shift as well, if the
+// item says so), and Alt with F, E, M, V or H opens that menu, as in other
+// Windows programs. Keys are named by where they sit
 // on the keyboard, so they work the same when it is switched to Greek.
-const MENU_KEYS = { KeyF: 'file-menu', KeyV: 'view-menu', KeyH: 'help-menu' };
+const MENU_KEYS = { KeyF: 'file-menu', KeyE: 'edit-menu', KeyM: 'moment-menu', KeyV: 'view-menu', KeyH: 'help-menu' };
 
 window.addEventListener('keydown', (event) => {
   if (event.repeat || event.metaKey) return;
-  // Shift is let through on one key only: the plus sign is Shift and = on
-  // most keyboards, and Ctrl with either means "bigger".
-  if (event.shiftKey && event.code !== 'Equal') return;
   // AltGr counts as Ctrl and Alt together, and means neither.
   if (event.ctrlKey === event.altKey) return;
 
   if (event.altKey) {
     const menu = document.getElementById(MENU_KEYS[event.code]);
-    if (!menu) return;
+    if (event.shiftKey || !menu || !menusInBar().includes(menu)) return;
     event.preventDefault();
     menu.showPopover();
     return;
   }
 
-  // "~=": an item may name several keys, with spaces between them.
-  const item = document.querySelector(`.menubar [data-key~="${event.code}"]`);
+  // "~=": an item may name several keys, with spaces between them. Shift has
+  // to be down for an item marked data-shift and up for the others, except
+  // on one key: the plus sign is Shift and = on most keyboards, and Ctrl
+  // with either means "bigger".
+  const named = [...document.querySelectorAll(`.menubar [data-key~="${event.code}"]`)];
+  const item = named.find((one) => event.code === 'Equal' || 'shift' in one.dataset === event.shiftKey);
   if (!item) return;
+  // In a box that is being typed in, Ctrl+Z takes back the typing.
+  if (['undo', 'redo'].includes(item.dataset.do) && event.target.closest('input, textarea')) return;
   event.preventDefault();
   if (canDo(item)) doItem(item);
 });

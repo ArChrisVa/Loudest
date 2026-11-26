@@ -11,10 +11,13 @@ const chatGet = document.getElementById('chat-get');
 const chatFile = document.getElementById('chat-file');
 const chatCount = document.getElementById('chat-count');
 const chatStatus = document.getElementById('chat-status');
+const chatLines = document.getElementById('chat-lines');
 const leadInInput = document.getElementById('lead-in');
 const exportBox = document.getElementById('export-box');
-const exportWhat = document.getElementById('export-what');
+const exportWhich = [...document.querySelectorAll('#export-which button')];
 const exportStatus = document.getElementById('export-status');
+const exportShow = document.getElementById('export-show');
+const exportCancel = document.getElementById('export-cancel');
 const exportButtons = [...exportBox.querySelectorAll('[data-export]')];
 const momentsTab = document.getElementById('tab-moments');
 const transcriptTab = document.getElementById('tab-transcript');
@@ -48,7 +51,9 @@ async function showExtras() {
   const videoPath = openPath;
   chatStatus.textContent = '';
   chatLink.value = '';
-  exportStatus.textContent = '';
+  exportKept = true;
+  exportSaid = '';
+  exportShow.hidden = true;
   transcript = null;
   transcriptProblem.textContent = '';
   transcriptSearch.value = '';
@@ -68,6 +73,11 @@ async function showExtras() {
 
 // ---------- The chat ----------
 
+// Whether the open video has a chat, and the second of the video the lines
+// on the Chat tab were last fetched for (null: fetch them again).
+let chatLoaded = false;
+let chatShownAt = null;
+
 // Called by work.js whenever it learns whether the open video has a chat:
 // `chat` is { count, ... } or null.
 function showChat(chat) {
@@ -76,7 +86,61 @@ function showChat(chat) {
   // The button is lit while the video has a chat.
   chatButton.classList.toggle('on', Boolean(chat));
   if (chat) chatCount.textContent = countOf(chat.count.toLocaleString('en'), 'chat message');
+  chatLoaded = Boolean(chat);
+  chatShownAt = null;
+  showChatLines();
 }
+
+// On the Chat tab: what the chat was writing around where the video is now,
+// the way it scrolled past during the stream. What was written after this
+// point is fainter. A click on a line goes to that time. Asked for once per
+// second of video, and only while the tab is the one showing.
+async function showChatLines() {
+  // No chat, or the video has just been closed.
+  if (!chatLoaded || !openPath) {
+    chatLines.replaceChildren();
+    return;
+  }
+  if (chatBox.hidden) return;
+  const second = Math.floor(seekWanted ?? player.currentTime);
+  if (second === chatShownAt) return;
+  chatShownAt = second;
+  const videoPath = openPath;
+  const lines = await window.loudest.chatAround(videoPath, second);
+  // An answer about another video, or about a second that has passed since.
+  if (videoPath !== openPath || second !== chatShownAt) return;
+
+  if (lines.length === 0) {
+    const quiet = document.createElement('li');
+    quiet.className = 'dim';
+    quiet.textContent = 'The chat was quiet around here.';
+    chatLines.replaceChildren(quiet);
+    return;
+  }
+  chatLines.replaceChildren(...lines.map(([time, text]) => {
+    const item = document.createElement('li');
+    const row = document.createElement('button');
+    const when = document.createElement('span');
+    const said = document.createElement('span');
+    row.type = 'button';
+    row.className = time > second ? 'line later' : 'line';
+    when.className = 'when';
+    when.textContent = formatDuration(time);
+    said.textContent = String(text).slice(0, 300);
+    row.append(when, said);
+    row.addEventListener('click', () => seekTo(time));
+    item.append(row);
+    return item;
+  }));
+  // The line the video has just reached stays in the middle of the list.
+  const reached = chatLines.querySelectorAll('.line:not(.later)');
+  const middle = reached[reached.length - 1] ?? chatLines.querySelector('.line');
+  // (The list is what its rows are measured from: styles.css.)
+  chatLines.scrollTop = middle.offsetTop - chatLines.clientHeight / 2;
+}
+
+player.addEventListener('timeupdate', showChatLines);
+player.addEventListener('seeking', showChatLines);
 
 // While a chat is on its way, the button that asked for it stops it.
 function showChatBusy() {
@@ -133,7 +197,10 @@ async function useChatFile(file) {
   if (outcome.count) findAgain();
 }
 
+// The chat can take minutes to download, so it is not thrown away on one click.
 document.getElementById('chat-remove').addEventListener('click', async () => {
+  const yes = await askSure('Remove the chat?', `Its ${chatCount.textContent} are deleted from Loudest. You can get them again with the link or the file.`, 'Remove');
+  if (!yes) return;
   await window.loudest.removeChat(openPath);
   chatStatus.textContent = '';
   findAgain();
@@ -150,12 +217,19 @@ leadInInput.addEventListener('change', async () => {
 
 // ---------- Export ----------
 
-// The moments that go out: the kept ones or, while nothing has been kept,
-// everything that was not rejected. In the order they happen, each with
-// where it starts and ends.
+// Which moments go out: the kept ones (true), or everything that was not
+// rejected. The editor chooses at the top of the box; each video starts on
+// the kept ones.
+let exportKept = true;
+// What the last export said. It stays in the box until the next one.
+let exportSaid = '';
+// True while clips are being cut.
+let cutting = false;
+
+// The moments that go out, in the order they happen, each with where it
+// starts and ends.
 function momentsToExport() {
-  const kept = moments.filter((moment) => moment.status === 'kept');
-  const list = kept.length ? kept : moments.filter((moment) => moment.status !== 'rejected');
+  const list = moments.filter((moment) => (exportKept ? moment.status === 'kept' : moment.status !== 'rejected'));
   return list
     .map((moment) => ({
       ...rangeOf(moment),
@@ -167,16 +241,36 @@ function momentsToExport() {
     .sort((a, b) => a.start - b.start);
 }
 
-// Says what will go out each time the box is opened.
-exportBox.addEventListener('toggle', (event) => {
-  if (event.newState !== 'open') return;
-  const list = momentsToExport();
-  const anyKept = moments.some((moment) => moment.status === 'kept');
-  if (list.length === 0) exportWhat.textContent = 'No moments to export yet.';
-  else exportWhat.textContent = countOf(list.length, anyKept ? 'kept moment' : 'moment') + (anyKept ? '' : ', none kept yet');
-  exportStatus.textContent = '';
-  for (const button of exportButtons) button.disabled = list.length === 0;
+// Brings the box up to date: which of the two choices is lit and how many
+// moments each holds, whether there is anything to send out, and what the
+// last export said.
+function showExport() {
+  const kept = moments.filter((moment) => moment.status === 'kept').length;
+  const notRejected = moments.filter((moment) => moment.status !== 'rejected').length;
+  for (const button of exportWhich) {
+    const forKept = button.dataset.which === 'kept';
+    button.setAttribute('aria-pressed', forKept === exportKept);
+    button.querySelector('em').textContent = forKept ? kept : notRejected;
+  }
+  const nothing = (exportKept ? kept : notRejected) === 0;
+  for (const button of exportButtons) button.disabled = nothing || cutting;
+  if (!nothing) exportStatus.textContent = exportSaid;
+  else if (exportKept && notRejected > 0) exportStatus.textContent = 'Nothing is kept yet. Keep a moment first, or choose "Everything not rejected".';
+  else exportStatus.textContent = 'No moments to export yet.';
+  exportCancel.hidden = !cutting;
+}
+
+// Before it opens, so it is never seen out of date.
+exportBox.addEventListener('beforetoggle', (event) => {
+  if (event.newState === 'open') showExport();
 });
+
+for (const button of exportWhich) {
+  button.addEventListener('click', () => {
+    exportKept = button.dataset.which === 'kept';
+    showExport();
+  });
+}
 
 // For pasting under a YouTube video: one line per moment, "1:02:03 Name".
 function timestampText(list) {
@@ -196,25 +290,39 @@ for (const button of exportButtons) {
     const format = button.dataset.export;
     const list = momentsToExport();
 
+    exportShow.hidden = true;
     if (format === 'timestamps') {
       await window.loudest.copyText(timestampText(list));
-      exportStatus.textContent = 'Copied. Paste it under the video on YouTube.';
+      exportSaid = 'Copied. Paste it under the video on YouTube.';
+      showExport();
       return;
     }
 
-    exportStatus.textContent = format === 'clips' ? 'Choose a folder for the clips…' : '';
+    exportSaid = format === 'clips' ? 'Choose a folder for the clips…' : '';
+    showExport();
     const outcome = format === 'clips'
       ? await window.loudest.exportClips(openPath, list)
       : await window.loudest.exportMarkers(openPath, format, list);
-    if (outcome.cancelled) exportStatus.textContent = '';
-    else if (outcome.error) exportStatus.textContent = outcome.error;
-    else exportStatus.textContent = format === 'clips' ? `${countOf(outcome.count, 'clip')} saved.` : SAID_AFTER_EXPORT[format];
+    // Cancelled: at the question where to save (nothing to say), or with
+    // the Cancel button while the clips were being cut.
+    if (outcome.cancelled) exportSaid = cutting ? 'Cancelled.' : '';
+    else if (outcome.error) exportSaid = outcome.error;
+    else exportSaid = format === 'clips' ? `${countOf(outcome.count, 'clip')} saved.` : SAID_AFTER_EXPORT[format];
+    cutting = false;
+    // What was written can be shown in its folder (main.js remembers where it is).
+    exportShow.hidden = Boolean(outcome.cancelled || outcome.error);
+    showExport();
   });
 }
 
 window.loudest.onClipsProgress(({ done, total }) => {
-  exportStatus.textContent = `Cutting clip ${done + 1} of ${total}…`;
+  cutting = true;
+  exportSaid = `Cutting clip ${done + 1} of ${total}…`;
+  showExport();
 });
+
+exportShow.addEventListener('click', () => window.loudest.showExport());
+exportCancel.addEventListener('click', () => window.loudest.cancelClips());
 
 // ---------- The transcript ----------
 
@@ -226,6 +334,9 @@ function showSideTab(chosen) {
     tab.setAttribute('aria-pressed', tab === chosen);
     panel.hidden = tab !== chosen;
   }
+  // The Chat tab's lines are only kept up while it is showing.
+  chatShownAt = null;
+  showChatLines();
 }
 
 for (const [tab] of SIDE_TABS) tab.addEventListener('click', () => showSideTab(tab));
@@ -335,6 +446,7 @@ window.loudest.getSettings().then((saved) => {
   leadInInput.value = saved.leadIn;
   speechLanguage.value = saved.language;
   skipStep.value = saved.skip;
+  sortSelect.value = saved.sort;
   nameSkipButtons();
 });
 

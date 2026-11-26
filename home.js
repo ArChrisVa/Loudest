@@ -13,6 +13,8 @@ const keptCategory = document.getElementById('kept-category');
 const keptEmpty = document.getElementById('kept-empty');
 const keptGroups = document.getElementById('kept-groups');
 const work = document.getElementById('work');
+const sure = document.getElementById('sure');
+const sureYes = document.getElementById('sure-yes');
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
 
@@ -70,6 +72,23 @@ function dotFor(colour) {
   return dot;
 }
 
+// Asks before something is deleted, in a card in the middle of the window:
+// a question, a line about what is lost, and the word on the button that
+// goes ahead. Answers true only when that button is pressed; Cancel, Escape
+// and a click beside the card all mean no. The keyboard starts on Cancel.
+function askSure(title, text, yes) {
+  document.getElementById('sure-title').textContent = title;
+  document.getElementById('sure-text').textContent = text;
+  sureYes.textContent = yes;
+  sure.returnValue = '';
+  sure.showModal();
+  return new Promise((resolve) => {
+    sure.addEventListener('close', () => resolve(sure.returnValue === 'yes'), { once: true });
+  });
+}
+sureYes.addEventListener('click', () => sure.close('yes'));
+document.getElementById('sure-no').addEventListener('click', () => sure.close(''));
+
 // ---------- The two views of the Home screen ----------
 
 async function showHome() {
@@ -97,6 +116,8 @@ async function showCards() {
   cards.clear();
   for (const card of recentList.querySelectorAll('.card')) card.remove();
   for (const entry of entries) recentList.append(buildCard(entry));
+  // With no video yet the tile is drawn large, in the middle (styles.css).
+  recentList.classList.toggle('empty', entries.length === 0);
 }
 
 function buildCard(entry) {
@@ -125,11 +146,9 @@ function buildCard(entry) {
   remove.addEventListener('click', async () => {
     // Removing a video also deletes the editor's work on it, so ask first when there is some.
     if (entry.saved > 0) {
-      const lost = entry.kept > 0 ? `the ${countOf(entry.kept, 'moment')} you kept` : 'your work on it';
-      const sure = window.confirm(
-        `Remove "${entry.name}" from this list?\n\nThis also deletes ${lost}. The video file itself stays where it is.`,
-      );
-      if (!sure) return;
+      const lost = entry.kept > 0 ? `Its ${countOf(entry.kept, 'kept moment')} ${entry.kept === 1 ? 'goes' : 'go'}` : 'Your work on it goes';
+      const yes = await askSure(`Remove "${entry.name}"?`, `${lost} with it. The video file itself stays on your PC.`, 'Remove');
+      if (!yes) return;
     }
     await window.loudest.removeRecent(entry.path);
     showCards();
@@ -139,7 +158,7 @@ function buildCard(entry) {
 }
 
 // The small text under a card's title: what is happening to the video now,
-// or else when it was last opened. `heard` is how many seconds of it have
+// or else how far the editor is with it, or else when it was last opened. `heard` is how many seconds of it have
 // been listened to so far, when that is known.
 function metaText(entry, heard) {
   if (entry.missing) return 'File not found. It was moved, renamed or deleted.';
@@ -148,8 +167,12 @@ function metaText(entry, heard) {
     return known ? `Listening… ${Math.min(99, Math.floor((heard / entry.duration) * 100))}%` : 'Listening…';
   }
   if (queue.waiting.includes(entry.path)) return 'Waiting to be listened to';
+  // toReview is there once the video has been open with its moments found.
+  if (entry.kept && entry.toReview === 0) return `${entry.kept} kept · all reviewed`;
+  if (entry.kept && entry.toReview) return `${entry.kept} kept · ${entry.toReview} to review`;
   const opened = 'Opened ' + daysAgo.format(daysBetween(Date.now(), entry.lastOpened), 'day');
-  return entry.kept ? `${opened} · ${entry.kept} kept` : opened;
+  if (entry.kept) return `${opened} · ${entry.kept} kept`;
+  return entry.toReview ? `${opened} · ${entry.toReview} to review` : opened;
 }
 
 window.loudest.onQueueChanged((status) => {
@@ -325,6 +348,7 @@ recentTab.addEventListener('click', () => showTab(false));
 keptTab.addEventListener('click', () => showTab(true));
 keptCategory.addEventListener('change', showKept);
 
+document.getElementById('back').addEventListener('click', showHome);
 document.getElementById('open-video').addEventListener('click', () => fileInput.click());
 document.getElementById('add-videos').addEventListener('click', () => fileInput.click());
 
@@ -336,10 +360,20 @@ fileInput.addEventListener('change', () => {
 });
 
 // Dropping videos anywhere on the window opens them. While a video is open,
-// a dropped file that is not a video is taken to be its chat.
-window.addEventListener('dragover', (event) => event.preventDefault());
+// a dropped file that is not a video is taken to be its chat. While files
+// are held over the window its edge is amber (styles.css), which says so.
+window.addEventListener('dragover', (event) => {
+  event.preventDefault();
+  if (event.dataTransfer.types.includes('Files')) document.body.classList.add('dropping');
+});
+// Fires for every element the mouse leaves; with nothing entered next, it
+// has left the window.
+window.addEventListener('dragleave', (event) => {
+  if (!event.relatedTarget) document.body.classList.remove('dropping');
+});
 window.addEventListener('drop', (event) => {
   event.preventDefault();
+  document.body.classList.remove('dropping');
   const files = [...event.dataTransfer.files];
   if (!work.hidden && files.length === 1 && !isVideoFile(files[0])) useChatFile(files[0]);
   else openFiles(files);

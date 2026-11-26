@@ -17,9 +17,11 @@ contextBridge.exposeInMainWorld('loudest', {
   listRecent: ask('recent:list'),
   saveRecent: ask('recent:save'),
   removeRecent: ask('recent:remove'),
+  // How many of a video's moments are still to review, for its card.
+  noteProgress: ask('recent:progress'),
 
   // The editor's choices, and the version that last ran here:
-  // { sensitivity, leadIn, language, skip, seenVersion, size }.
+  // { sensitivity, leadIn, language, skip, sort, seenVersion, size }.
   getSettings: ask('settings:get'),
   setSettings: ask('settings:set'),
 
@@ -51,6 +53,8 @@ contextBridge.exposeInMainWorld('loudest', {
   chatFromFile: ask('chat:fromFile'),
   cancelChat: ask('chat:cancel'),
   removeChat: ask('chat:remove'),
+  // What the chat wrote around a point in the video: [[seconds, text], ...].
+  chatAround: ask('chat:around'),
 
   // What is said in the video, as text.
   canTranscribe: ask('transcript:possible'),
@@ -63,6 +67,9 @@ contextBridge.exposeInMainWorld('loudest', {
   exportMarkers: ask('export:markers'),
   exportClips: ask('export:clips'),
   onClipsProgress: hear('clips:progress'), // { done, total }
+  cancelClips: ask('export:cancel'),
+  // Opens the folder with what the last export wrote.
+  showExport: ask('export:show'),
   copyText: ask('clipboard:write'),
 
   // How big everything in the window is drawn. With 'bigger', 'smaller' or

@@ -4,10 +4,14 @@
 // the clips they would be cut into, and how loud the sound is.
 //
 //   click or drag      jump to that point
+//   click a moment     its marker, or its clip once it is kept: selects it
+//   right-click one    the small menu for it
+//   double-click       show the whole video again
 //   point at it        shows the time and the picture there
 //   mouse wheel        zoom in and out around the pointer
 //   Shift + wheel      slide left and right
-//   the thin bar below shows the whole video and which part is zoomed in on
+//   the thin bar below shows the whole video, which part is zoomed in on,
+//   and where the video is
 //
 // It also shows where nobody speaks (striped), how busy the chat is (the low
 // green hills under the sound), and where the selected moment starts and
@@ -22,8 +26,12 @@
 //   timeline.setQuiet([{ start, end }])
 //   timeline.setChat([0..1 per ten seconds])
 //   timeline.setTime(seconds, reveal)
+//   timeline.reveal({ start, end })             look closer if that stretch is too thin to grab
+//   timeline.zoomTo({ start, end })             look at that stretch
+//   timeline.showAll()                          the whole video again
 //   timeline.onSeek = (seconds) => ...
 //   timeline.onMoment = (moment) => ...
+//   timeline.onContext = (event, moment) => ...           a moment was right-clicked
 //   timeline.onRange = (edge, seconds, finished) => ...   'start' or 'end' is being dragged
 const timeline = (() => {
   const main = document.getElementById('timeline-main');
@@ -44,6 +52,8 @@ const timeline = (() => {
   const overview = document.getElementById('timeline-overview');
   const overviewMarks = document.getElementById('timeline-overview-marks');
   const windowBox = document.getElementById('timeline-window');
+  const overviewNow = document.getElementById('timeline-overview-now');
+  const clock = document.querySelector('.clock');
 
   const SMALLEST_VIEW = 30; // seconds: how far in you can zoom
   // Distances between labelled ruler ticks, in seconds. The first one that
@@ -53,7 +63,10 @@ const timeline = (() => {
   const CHAT_BIN = 10; // seconds per number of the chat's busyness
   const FILM_SHAPE = 16 / 9; // how wide a picture of the film is for its height
 
-  const api = { onSeek() {}, onMoment() {}, onRange() {} };
+  const THIN = 28; // pixels: a selected moment narrower than this has its two handles on top of each other
+  const ROOMY = 56; // pixels: how wide it is made then
+
+  const api = { onSeek() {}, onMoment() {}, onRange() {}, onContext() {} };
   let duration = 0;
   let viewStart = 0; // the part of the video the strip is showing
   let viewEnd = 0;
@@ -121,6 +134,8 @@ const timeline = (() => {
     playhead.hidden = x < 0 || x > width();
     playhead.style.left = x + 'px';
     played.style.width = clamp(x, 0, width()) + 'px';
+    // The same on the thin bar, where the whole video is always in view.
+    overviewNow.style.left = (time / duration) * 100 + '%';
   }
 
   // Sizes a canvas to the strip and hands back a pen that draws in CSS pixels.
@@ -266,7 +281,17 @@ const timeline = (() => {
       : formatDuration(seconds);
     // The card is centred on the pointer, but never sticks out past the strip's ends.
     const half = hoverCard.offsetWidth / 2;
-    hoverCard.style.left = clamp(x, half, Math.max(half, width() - half)) - x + 'px';
+    let centre = clamp(x, half, Math.max(half, width() - half));
+    // It rises over the buttons under the picture. Where it would cover the
+    // clock there, it steps aside to whichever side is nearer.
+    const edge = main.getBoundingClientRect().left;
+    const around = clock.getBoundingClientRect();
+    const from = around.left - edge - 8;
+    const to = around.right - edge + 8;
+    if (around.width && centre + half > from && centre - half < to) {
+      centre = centre < (from + to) / 2 && from - half >= half ? from - half : to + half;
+    }
+    hoverCard.style.left = centre - x + 'px';
     showPreview(marker ? marker.moment.time : seconds);
     // Dragging with the button held down keeps jumping.
     if (main.hasPointerCapture(event.pointerId)) api.onSeek(seconds);
@@ -274,6 +299,11 @@ const timeline = (() => {
 
   main.addEventListener('pointerleave', () => {
     hover.hidden = true;
+  });
+
+  // A double-click on the strip itself (not on a moment) shows the whole video again.
+  main.addEventListener('dblclick', (event) => {
+    if (!event.target.closest('.marker, .clip, .handle')) api.showAll();
   });
 
   // The small picture is a second, silent player that is sent to wherever
@@ -433,17 +463,27 @@ const timeline = (() => {
     draw();
   };
 
+  // A marker and a clip are both the moment itself: a click selects it, a
+  // right-click opens its menu.
+  function makeClickable(element, moment) {
+    // Stops the press from also counting as a jump to that exact point.
+    element.addEventListener('pointerdown', (event) => event.stopPropagation());
+    element.addEventListener('click', () => api.onMoment(moment));
+    element.addEventListener('contextmenu', (event) => api.onContext(event, moment));
+  }
+
   function build() {
     markerLayer.replaceChildren();
     clipLayer.replaceChildren();
     overviewMarks.replaceChildren();
-    // A kept moment is drawn on the Clips lane from its start to its end.
+    // A kept moment is drawn on the Video lane from its start to its end.
     clips = shown.moments.filter((moment) => moment.status === 'kept' && moment !== shown.selected).map((moment) => {
       const element = document.createElement('div');
       const name = document.createElement('span');
       element.className = 'clip ' + moment.kind.toLowerCase().replace(' ', '-');
       name.textContent = labelOf(moment);
       element.append(name);
+      makeClickable(element, moment);
       clipLayer.append(element);
       return { moment, element };
     });
@@ -459,12 +499,10 @@ const timeline = (() => {
       if (moment.status === 'kept') {
         const cap = document.createElement('i');
         cap.className = 'cap';
-        cap.style.background = shown.colourFor(moment) || '#fff';
+        cap.style.background = shown.colourFor(moment) || '#e6b455'; // --accent in styles.css
         element.append(cap);
       }
-      // Stops the click from also counting as a jump to that exact point.
-      element.addEventListener('pointerdown', (event) => event.stopPropagation());
-      element.addEventListener('click', () => api.onMoment(moment));
+      makeClickable(element, moment);
       markerLayer.append(element);
 
       if (duration) {
@@ -493,6 +531,30 @@ const timeline = (() => {
     } else {
       drawPlayhead();
     }
+  };
+
+  // Shows `stretch` in the middle of the strip, `pixels` wide.
+  function zoomOn(stretch, pixels) {
+    if (!duration || !width()) return;
+    const span = Math.max(stretch.end - stretch.start, 1) * (width() / pixels);
+    const middle = (stretch.start + stretch.end) / 2;
+    setView(middle - span / 2, middle + span / 2);
+  }
+
+  // Called when a moment is selected. Over a whole long video a moment is a
+  // sliver with its two handles on top of each other; then the strip looks
+  // closer, just far enough to leave something to grab.
+  api.reveal = (stretch) => {
+    if (!duration || !width()) return;
+    const wide = ((stretch.end - stretch.start) / (viewEnd - viewStart)) * width();
+    if (wide < THIN) zoomOn(stretch, ROOMY);
+  };
+
+  // The moment across a fifth of the strip, with what is around it on either side.
+  api.zoomTo = (stretch) => zoomOn(stretch, width() / 5);
+
+  api.showAll = () => {
+    if (duration) setView(0, duration);
   };
 
   return api;

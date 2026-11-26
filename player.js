@@ -78,6 +78,35 @@ function nameSkipButtons() {
 }
 nameSkipButtons();
 
+// J, K and L, as in Resolve and Premiere: L plays, and each further press
+// plays faster; K stops and goes back to normal speed; J slows down again,
+// and at normal speed steps back ten seconds (this player cannot play
+// backwards).
+const FAST = [2, 4];
+
+function playFaster() {
+  if (player.paused) play();
+  else player.playbackRate = FAST.find((rate) => rate > player.playbackRate) ?? player.playbackRate;
+}
+
+function stop() {
+  player.pause();
+  player.playbackRate = 1;
+}
+
+function playSlower() {
+  if (player.playbackRate > 1) player.playbackRate = FAST.findLast((rate) => rate < player.playbackRate) ?? 1;
+  else skip(-10);
+}
+
+// One picture back or forward, with the video standing still. The player
+// does not say how many pictures a second the video has; a thirtieth of a
+// second is one picture of most recordings, and two of a 60-a-second one.
+function stepFrame(direction) {
+  player.pause();
+  skip(direction / 30);
+}
+
 function toggleFullScreen() {
   // The whole stage goes full screen, so the buttons and the strip come along.
   if (document.fullscreenElement) document.exitFullscreen();
@@ -96,8 +125,10 @@ skipStep.addEventListener('change', () => {
   nameSkipButtons();
   skipStep.blur();
 });
-document.getElementById('previous-moment').addEventListener('click', () => stepMoment(-1));
-document.getElementById('next-moment').addEventListener('click', () => stepMoment(1));
+// The outer pair points along the video: the moment before or after where
+// it is now, whatever order the list is in. (Up and Down follow the list.)
+document.getElementById('previous-moment').addEventListener('click', () => stepInTime(-1));
+document.getElementById('next-moment').addEventListener('click', () => stepInTime(1));
 document.getElementById('add-moment').addEventListener('click', () => addMoment());
 document.getElementById('fullscreen').addEventListener('click', toggleFullScreen);
 speed.addEventListener('change', () => {
@@ -120,6 +151,10 @@ player.addEventListener('pause', () => playButton.classList.remove('playing'));
 player.addEventListener('volumechange', () => {
   muteButton.classList.toggle('muted', player.muted || player.volume === 0);
   volume.value = player.muted ? 0 : player.volume;
+});
+// Also when another video is opened, which starts at normal speed again.
+player.addEventListener('ratechange', () => {
+  speed.value = String(player.playbackRate);
 });
 player.addEventListener('durationchange', () => {
   const known = Number.isFinite(player.duration);
@@ -167,26 +202,39 @@ work.addEventListener('mousedown', (event) => {
 // so they work the same when the keyboard is switched to Greek.
 const KEYS = {
   Space: togglePlay,
-  KeyK: togglePlay,
-  KeyJ: () => skip(-10),
-  KeyL: () => skip(10),
+  KeyK: stop,
+  KeyJ: playSlower,
+  KeyL: playFaster,
   ArrowLeft: (event) => skip(-skipSize(event)),
   ArrowRight: (event) => skip(skipSize(event)),
+  Comma: () => stepFrame(-1),
+  Period: () => stepFrame(1),
+  Home: () => seekTo(0),
+  End: () => skip(Infinity),
   ArrowUp: () => stepMoment(-1),
   ArrowDown: () => stepMoment(1),
   // M adds a marker, and I and O set where a clip starts and ends, in
-  // Premiere and in Resolve too.
+  // Premiere and in Resolve too. With Shift, I and O go to the start or the
+  // end of the selected moment instead, as they do there.
   KeyM: () => addMoment(),
-  KeyI: () => setEdge('start', player.currentTime),
-  KeyO: () => setEdge('end', player.currentTime),
+  KeyI: (event) => (event.shiftKey ? goToEdge('start') : setEdge('start', player.currentTime)),
+  KeyO: (event) => (event.shiftKey ? goToEdge('end') : setEdge('end', player.currentTime)),
   KeyA: () => decide('kept'),
   KeyX: () => decide('rejected'),
   // The same as X: rejects a found moment, removes one the editor added.
   Delete: () => decide('rejected'),
+  KeyU: () => clearDecision(),
+  Enter: () => nameMoment(),
+  NumpadEnter: () => nameMoment(),
+  KeyZ: (event) => (event.shiftKey ? timeline.showAll() : zoomToSelected()),
   KeyF: toggleFullScreen,
 };
 // Holding one of these down keeps going. The others act once per press.
-const REPEATING = ['KeyJ', 'KeyL', 'ArrowLeft', 'ArrowRight'];
+const REPEATING = ['ArrowLeft', 'ArrowRight', 'Comma', 'Period'];
+
+function goToEdge(edge) {
+  if (selected) seekTo(rangeOf(selected)[edge]);
+}
 
 window.addEventListener('keydown', (event) => {
   // Ctrl belongs to the menus (menus.js), except with the left and right
@@ -195,8 +243,10 @@ window.addEventListener('keydown', (event) => {
   if (work.hidden || event.altKey || event.metaKey || (event.ctrlKey && !jump)) return;
   // Typing in a box, or pressing Space on a button reached with Tab, keeps its normal meaning.
   // (closest, not matches: the rows of a menu's open list are inside the menu.)
-  if (event.target.closest('input, select, textarea')) return;
-  if (event.code === 'Space' && event.target.matches('button')) return;
+  // So does any key while a card is open in front of the window.
+  if (event.target.closest('input, select, textarea, dialog')) return;
+  // The same for Enter: on a button it presses the button.
+  if (['Space', 'Enter', 'NumpadEnter'].includes(event.code) && event.target.matches('button')) return;
 
   const action = KEYS[event.code];
   if (!action) return;

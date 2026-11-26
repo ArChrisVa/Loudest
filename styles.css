@@ -1,8 +1,9 @@
 /* The look of both screens.
-   Three colours carry it: ink (the dark surfaces), bone (text and the white
-   buttons) and amber (the one accent: the main action, the selected tab, the
-   selected row, kept moments). The five moment colours say why a moment was
-   found and are used for nothing else. */
+   Three colours carry it: ink (the dark surfaces), bone (text, the white
+   buttons, and whatever is selected: the row in the list, the band on the
+   timeline) and amber (the one accent: the main action, the chosen tab, and
+   everything kept). The five moment colours say why a moment was found and
+   are used for nothing else, and the playhead has a blue of its own. */
 
 @font-face { font-family: Geist; src: url(fonts/Geist.woff2) format('woff2'); font-weight: 100 900; }
 @font-face { font-family: "Geist Mono"; src: url(fonts/GeistMono.woff2) format('woff2'); font-weight: 100 900; }
@@ -25,10 +26,16 @@
 
   --laugh: #f08a4b;
   --scream: #c98bea;
-  --shout: #e9e04f;
+  --shout: #f0607a;
   --voice: #56bfd0;
   --chat: #6fcf9c;
   --added: #ecebe4;
+  /* Where the video is, on the timeline. */
+  --now: #6ea0ff;
+  /* A little grain, so the dark areas are not dead flat. It is part of the
+     background of the window and of the panels, so it never lies over the
+     video or over a picture. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.07'/%3E%3C/svg%3E");
 
   /* Corners get tighter the deeper an element sits. */
   --r-panel: 10px;
@@ -44,7 +51,7 @@
 html, body { height: 100%; margin: 0; }
 
 body {
-  background: var(--base);
+  background: var(--base) var(--grain);
   color: var(--text);
   font: 13px/1.4 Geist, "Segoe UI Variable Text", "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -52,16 +59,15 @@ body {
   user-select: none;
 }
 
-/* A little grain, so the dark areas are not dead flat. */
-body::after {
+/* While files are held over the window, its edge is amber: they can be
+   dropped anywhere (home.js). */
+body.dropping::after {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  opacity: .05;
-  mix-blend-mode: overlay;
   z-index: 100;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  box-shadow: 0 0 0 2px var(--accent) inset, 0 0 40px #e6b45533 inset;
 }
 
 .icons { display: none; }
@@ -126,7 +132,7 @@ kbd {
 body:has(#home[hidden]) .only-home, body:has(#work[hidden]) .only-work { display: none; }
 
 .panel {
-  background: var(--surface);
+  background: var(--surface) var(--grain);
   border-radius: var(--r-panel);
   box-shadow: 0 0 0 1px var(--line), 0 1px 0 #ffffff0a inset;
   overflow: hidden;
@@ -166,7 +172,7 @@ body:has(#home[hidden]) .only-home, body:has(#work[hidden]) .only-work { display
 .top .tabs { height: 100%; }
 .top .tabs > [aria-pressed="true"]::after { bottom: 3px; }
 
-/* File, View, Help. */
+/* File, Edit, Moment, View, Help. */
 .menubar { display: flex; gap: 2px; padding-left: 8px; }
 .menubar > button { height: 26px; padding: 0 9px; border-radius: var(--r-control); color: var(--dim); font-weight: 500; }
 .menubar > button:hover, .menubar > button:has(+ :popover-open) { background: var(--raised); color: var(--text); }
@@ -207,7 +213,7 @@ body:has(#home[hidden]) .only-home, body:has(#work[hidden]) .only-work { display
 .tabs > [aria-pressed="true"] .icon { color: var(--accent-hi); }
 .tabs > [aria-pressed="true"]::after, .tabs > [aria-current]::after { content: ""; position: absolute; inset: auto 0 0 0; height: 2px; background: var(--accent); }
 
-input[type="text"], input[type="search"], input[type="number"], textarea, .field, select {
+input[type="text"], input[type="search"], input[type="number"], textarea, select {
   height: 30px;
   border: 0;
   border-radius: var(--r-control);
@@ -217,9 +223,9 @@ input[type="text"], input[type="search"], input[type="number"], textarea, .field
   transition: box-shadow .15s;
   user-select: text;
 }
-input:hover, textarea:hover, .field:hover, select:hover { box-shadow: 0 0 0 1px var(--line-strong) inset; }
+input:hover, textarea:hover, select:hover { box-shadow: 0 0 0 1px var(--line-strong) inset; }
 /* The box the keyboard is in: no ring around it, its own thin edge turns bone. */
-input[type="text"]:focus-visible, input[type="search"]:focus-visible, input[type="number"]:focus-visible, textarea:focus-visible, .field:focus-visible, select:focus-visible { outline: 0; box-shadow: 0 0 0 1px #ecebe473 inset; }
+input[type="text"]:focus-visible, input[type="search"]:focus-visible, input[type="number"]:focus-visible, textarea:focus-visible, select:focus-visible { outline: 0; box-shadow: 0 0 0 1px #ecebe473 inset; }
 input::placeholder, textarea::placeholder { color: var(--faint); }
 textarea { height: auto; padding: 7px 9px; resize: none; display: block; width: 100%; line-height: 1.4; }
 
@@ -293,7 +299,10 @@ option:not(:checked)::checkmark { visibility: hidden; }
 
 input[type="range"] { appearance: none; height: 14px; background: none; padding: 0; box-shadow: none; cursor: pointer; }
 input[type="range"]::-webkit-slider-runnable-track { height: 3px; border-radius: 3px; background: var(--hover); }
-input[type="range"]::-webkit-slider-thumb { appearance: none; width: 4px; height: 14px; margin-top: -5.5px; border-radius: 2px; background: var(--text); box-shadow: 0 0 0 3px var(--surface); }
+/* The handle looks 4 pixels wide and takes the mouse over 14: the rest of
+   its width is painted in the panel's colour, which also cuts the track
+   either side of it. */
+input[type="range"]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; margin-top: -5.5px; border-radius: 2px; background: linear-gradient(90deg, var(--surface) 0 5px, var(--text) 5px 9px, var(--surface) 9px); }
 input[type="range"]:hover { box-shadow: none; }
 
 progress { appearance: none; width: 100%; height: 3px; border: 0; border-radius: 3px; background: var(--hover); overflow: hidden; display: block; }
@@ -333,25 +342,45 @@ progress:indeterminate { background: linear-gradient(90deg, var(--hover) 0 40%, 
 .box-row input[type="number"] { width: 58px; font-family: var(--mono); font-size: 12px; }
 /* Only while it is open: a display of its own would show a closed box too. */
 .menu { padding: 6px; }
+.menu:focus-visible { outline: 0; }
 .menu:popover-open { display: grid; gap: 1px; }
 .menu p { padding: 6px 8px; color: var(--dim); font-size: 12px; }
 .menu p:empty { display: none; }
-.menu button { height: 32px; padding: 0 8px; border-radius: var(--r-small); text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+/* "> button": the items themselves, not the buttons of what else a box may
+   hold (the choice at the top of the Export box, the buttons under it). */
+.menu > button { height: 32px; padding: 0 8px; border-radius: var(--r-small); text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 /* Reached with the arrow keys, an item lights up the way it does under the mouse. */
-.menu button:hover:not(:disabled), .menu button:focus-visible { background: var(--hover); outline: 0; }
+.menu > button:hover:not(:disabled), .menu > button:focus-visible { background: var(--hover); outline: 0; }
 .menu hr { border: 0; height: 1px; margin: 4px 2px; background: var(--line); }
 .keys { font: 400 11px var(--mono); color: var(--faint); }
+
+/* The Export box: which moments go out, the four ways, and what the last
+   export said, which can be selected and copied. */
+#export-which { margin-bottom: 5px; }
+#export-status { user-select: text; cursor: text; line-height: 1.45; }
+.export-after { display: flex; gap: 6px; padding: 0 8px 6px; }
+.export-after:not(:has(button:not([hidden]))) { display: none; }
+.export-after .btn { height: 26px; font-size: 12px; }
 
 /* The menus hang from the left edge of their word in the top bar. */
 .menubar .box { right: auto; left: anchor(left); width: 250px; }
 #file-button { anchor-name: --file-button; }
+#edit-button { anchor-name: --edit-button; }
+#moment-button { anchor-name: --moment-button; }
 #view-button { anchor-name: --view-button; }
 #help-button { anchor-name: --help-button; }
 #file-menu { position-anchor: --file-button; }
+#edit-menu { position-anchor: --edit-button; }
+#moment-menu { position-anchor: --moment-button; }
 #view-menu { position-anchor: --view-button; }
 #help-menu, #shortcuts-box { position-anchor: --help-button; }
 
-#shortcuts-box { width: 310px; padding: 14px; }
+/* The menu a right-click on a moment opens hangs from nothing: work.js puts
+   it where the mouse is. */
+#moment-context { position: fixed; top: 0; left: 0; right: auto; width: 230px; margin: 0; }
+
+/* The list of keys is long: in a low window it scrolls inside its box. */
+#shortcuts-box { width: 370px; padding: 14px; max-height: calc(100vh - 56px); overflow-y: auto; }
 .key-list { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; align-items: center; }
 .key-list dt { display: flex; gap: 4px; }
 .key-list dd { margin: 0; color: var(--dim); }
@@ -382,6 +411,10 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 .whats-new-text span { color: var(--dim); font-size: 12.5px; line-height: 1.45; text-wrap: pretty; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
 .dialog-actions .primary { padding: 0 14px; }
+/* The card that asks before something is deleted. */
+#sure { width: min(420px, 92vw); }
+#sure h2 { margin-bottom: 8px; overflow-wrap: anywhere; }
+#sure p { line-height: 1.5; text-wrap: pretty; }
 
 /* ---------- Home ---------- */
 
@@ -408,6 +441,16 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 .new-tile .icon { width: 22px; height: 22px; margin-bottom: 6px; }
 .new-tile b { font-weight: 500; color: var(--text); }
 .new-tile span { font-size: 12px; color: var(--faint); }
+/* With no video yet (home.js marks the list "empty"), the tile is the whole
+   screen's one thing: large, in the middle, with a line saying what Loudest
+   is for. */
+.new-tile .first-time { display: none; }
+.grid.empty { grid-template-columns: 1fr; min-height: 100%; place-items: center; }
+.grid.empty li { width: min(560px, 100%); }
+.grid.empty .new-tile { aspect-ratio: auto; padding: 64px 24px; gap: 6px; }
+.grid.empty .new-tile .icon { width: 30px; height: 30px; margin-bottom: 10px; }
+.grid.empty .new-tile b { font-size: 17px; letter-spacing: -.01em; }
+.grid.empty .new-tile .first-time { display: block; font-size: 13px; color: var(--dim); margin-bottom: 8px; }
 
 .card { position: relative; min-width: 0; }
 .card-open { display: grid; gap: 2px; width: 100%; text-align: left; }
@@ -435,7 +478,12 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 
 /* ---------- Work: the top bar ---------- */
 
-#work-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#work-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* "Videos", the way back, in front of the name of the open video. */
+.crumb { height: 26px; padding: 0 8px 0 4px; display: flex; align-items: center; gap: 3px; border-radius: var(--r-control); color: var(--dim); font-weight: 500; flex: none; }
+.crumb .icon { width: 13px; height: 13px; }
+.crumb:hover { background: var(--raised); color: var(--text); }
+.slash { color: var(--faint); margin: 0 8px 0 2px; }
 
 /* ---------- Work: the three columns ---------- */
 
@@ -445,7 +493,7 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 /* minmax(0, 1fr): the column is as wide as the panel and no wider, whatever
    is in it. Left to itself it grows to fit its widest content. */
 .side { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
-.side-tabs, .details-tabs { height: 42px; padding: 0 12px; box-shadow: 0 1px 0 var(--line); }
+.side-tabs { height: 42px; padding: 0 12px; box-shadow: 0 1px 0 var(--line); }
 /* Always room for three digits, so the tabs after it stay where they are
    when the number changes. */
 #moment-count { color: var(--faint); font: 400 11px var(--mono); min-width: 3ch; }
@@ -455,12 +503,18 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 
 .moments-head { padding: 10px 10px 8px; display: grid; gap: 8px; }
 .seg { display: flex; padding: 2px; border-radius: var(--r-control); background: var(--base); box-shadow: 0 0 0 1px var(--line) inset; }
-.seg button { flex: 1; height: 24px; border-radius: var(--r-small); color: var(--dim); font-size: 12px; font-weight: 500; }
+.seg button { flex: 1 1 auto; height: 24px; padding: 0 5px; border-radius: var(--r-small); color: var(--dim); font-size: 12px; font-weight: 500; white-space: nowrap; }
+/* How many moments a button holds. Always room for three digits, so the
+   buttons keep their width while the numbers change. */
+.seg em { display: inline-block; min-width: 3ch; margin-left: 4px; font: 400 10.5px var(--mono); color: var(--faint); text-align: left; }
+.seg em:empty { display: none; }
 .seg button:hover { color: var(--text); }
 .seg button[aria-pressed="true"] { background: var(--hover); color: var(--text); box-shadow: 0 1px 0 #ffffff14 inset, 0 1px 2px #0008; }
 .menus { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .menus select { height: 26px; width: 100%; }
-.sensitivity { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; color: var(--faint); font-size: 11.5px; }
+#moment-search { width: 100%; height: 26px; font-size: 12px; }
+.sensitivity { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px; color: var(--faint); font-size: 11.5px; }
+.sensitivity .what { color: var(--dim); font-weight: 500; margin-right: 4px; }
 
 /* The line about the listening and its bar sit under the list, not over it:
    the rows stay where they are when the two come and go. With no rows the
@@ -469,7 +523,14 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 #analysis-status, #save-problem { padding: 0 12px; color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
 #analysis-status:not(:empty), #save-problem:not(:empty) { padding-bottom: 8px; }
 #analysis-status:not(:empty) { padding-top: 2px; }
-#analysis-progress { width: auto; margin: 0 12px 8px; }
+/* While the video is being listened to: how far it is, in large figures,
+   about how long is left, the bar, and what can be done meanwhile. */
+#listening { padding: 16px 12px 12px; display: grid; gap: 6px; }
+#listening-percent { font: 500 26px/1 var(--mono); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+#listening-percent:empty { display: none; }
+#listening-left { color: var(--dim); font-size: 12px; }
+#listening .hint { color: var(--faint); font-size: 12px; display: flex; align-items: center; gap: 5px; margin-top: 6px; }
+#analysis-progress { margin: 4px 0; }
 
 /* scrollbar-gutter keeps room for the scroll bar at all times, so the rows do
    not jump sideways when the list grows long enough to need it. */
@@ -477,7 +538,11 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 .moment { display: grid; grid-template-columns: 72px 1fr auto; gap: 10px; align-items: center; width: 100%; padding: 6px 8px 6px 10px; border-radius: var(--r-control); position: relative; text-align: left; }
 .moment:hover { background: #ffffff08; }
 .moment[aria-current] { background: var(--raised); }
-.moment[aria-current]::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px; border-radius: 2px; background: var(--accent); }
+/* The selected row is marked in bone, like the selected band on the
+   timeline; amber is left to what is kept. */
+.moment[aria-current]::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px; border-radius: 2px; background: var(--text); }
+/* Picked along with the selected one (Ctrl or Shift and a click). */
+.moment.picked { background: #ffffff0d; box-shadow: 0 0 0 1px var(--line-strong) inset; }
 .moment .shot { width: 72px; height: 40px; border-radius: var(--r-small); background: var(--raised); box-shadow: 0 0 0 1px #0008; overflow: hidden; display: block; }
 .moment .shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .moment .label { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -510,6 +575,13 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
    keeps one width, so the box for the link beside it does not change size. */
 #chat-get { min-width: 82px; }
 #chat-status:not(:empty), .transcript-start p { color: var(--dim); font-size: 12px; }
+#chat-none p { font-size: 12px; line-height: 1.5; text-wrap: pretty; }
+/* What the chat wrote around where the video is. Its rows are the
+   transcript's (.line); what comes after this point is fainter. "relative"
+   lets extras.js measure a row's place inside the list. */
+#chat-lines { list-style: none; margin: 0; padding: 0; overflow-y: auto; scrollbar-gutter: stable; min-height: 0; flex: 1; position: relative; }
+#chat-lines .dim { padding: 6px; font-size: 12px; }
+.line.later { opacity: .5; }
 .transcript-start, .transcript-ready { display: grid; gap: 10px; min-height: 0; }
 .transcript-ready { grid-template-rows: auto auto 1fr; flex: 1; }
 #transcript-search { width: 100%; }
@@ -558,6 +630,7 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 
 /* right */
 .details { display: grid; grid-template-rows: auto 1fr; }
+.details-head { margin: 0; height: 42px; padding: 0 12px; display: flex; align-items: center; font-size: 13px; font-weight: 500; box-shadow: 0 1px 0 var(--line); }
 #inspector-empty { padding: 14px 12px; font-size: 12px; }
 #removed-line { padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; align-self: start; color: var(--dim); font-size: 12px; }
 #removed-line .btn { height: 26px; color: var(--text); }
@@ -570,14 +643,24 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 .verdict button kbd { margin-left: auto; }
 .verdict button:hover { color: var(--text); }
 .verdict button[aria-pressed="true"] { background: var(--hover); color: var(--text); box-shadow: 0 1px 0 #ffffff14 inset, 0 1px 2px #0008; }
-.verdict #keep[aria-pressed="true"] .icon { color: var(--accent-hi); }
+/* Kept is amber here too, so it cannot be missed. */
+.verdict #keep[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 18%, var(--hover)); color: var(--accent-hi); }
 .inspector label { display: grid; gap: 5px; color: var(--dim); font-size: 11.5px; }
-.inspector label input, .inspector label textarea, .inspector label .field { font-size: 13px; color: var(--text); width: 100%; }
-.range { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: end; }
-.range .field { font: 400 12px var(--mono); text-align: left; }
-/* Room for "999 s" at all times, so Start and End keep their width whatever
-   the length is. */
-#range-length { height: 30px; min-width: calc(5ch + 6px); display: flex; align-items: center; justify-content: flex-end; padding: 0 2px 0 4px; color: var(--dim); font: 400 12px var(--mono); }
+.inspector label input, .inspector label textarea { font-size: 13px; color: var(--text); width: 100%; }
+/* Start and End side by side: under each name, the time (a box to type in)
+   and the button that puts it where the video is now. */
+.range { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.edge { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 4px; }
+.edge label { grid-column: 1 / -1; }
+.edge input { min-width: 0; font: 400 12px var(--mono); color: var(--text); }
+.edge .btn { display: flex; align-items: center; gap: 5px; padding: 0 6px; color: var(--dim); }
+.edge .btn:hover { color: var(--text); }
+.edge .btn .icon { width: 14px; height: 14px; }
+/* Under them: how long the moment is, and the way back to what was found. */
+.range-foot { display: flex; align-items: center; justify-content: space-between; min-height: 18px; margin-top: -6px; color: var(--dim); }
+#range-length { font: 400 12px var(--mono); }
+.link { color: var(--dim); font-size: 12px; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-strong); }
+.link:hover { color: var(--text); }
 
 /* ---------- Work: the timeline ---------- */
 
@@ -588,6 +671,8 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 .timeline-tools, .timeline-zoom { display: flex; align-items: center; gap: 1px; }
 .timeline-zoom { justify-content: flex-end; }
 .timeline-bar .ghost { width: 28px; height: 26px; }
+#add-moment { height: 26px; padding: 0 7px 0 6px; display: flex; align-items: center; gap: 6px; font-size: 12px; }
+#add-moment .icon { width: 13px; height: 13px; }
 #timeline-selected { color: var(--dim); font-size: 12px; white-space: nowrap; }
 #timeline-selected b { color: var(--text); font-weight: 500; margin-right: 10px; }
 #timeline-selected span { font-family: var(--mono); letter-spacing: -0.02em; }
@@ -595,6 +680,9 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 .timeline-body { display: grid; grid-template-columns: 76px 1fr; min-height: 0; }
 .lane-names { display: grid; grid-template-rows: 22px 26px 54px 1fr; box-shadow: -1px 0 0 var(--line) inset; color: var(--faint); font-size: 11px; }
 .lane-names span { display: flex; align-items: center; padding-left: 12px; }
+/* The Audio lane holds two things: the sound, and along its bottom the chat. */
+.lane-names .two { flex-direction: column; align-items: flex-start; justify-content: space-between; padding-top: 8px; padding-bottom: 3px; }
+#chat-lane-name { font-style: normal; font-size: 10px; color: var(--chat); }
 .timeline-main { position: relative; min-width: 0; cursor: pointer; display: grid; grid-template-rows: 22px 1fr; }
 #timeline-ruler { width: 100%; height: 22px; display: block; box-shadow: 0 -1px 0 var(--line) inset; }
 .timeline-track { position: relative; display: grid; grid-template-rows: 26px 54px 1fr; min-height: 0; }
@@ -609,18 +697,23 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 #timeline-film i { position: absolute; top: 0; bottom: 0; background: var(--hover); overflow: hidden; }
 #timeline-film img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* A moment on its lane: a short bar in its colour. */
-.marker { position: absolute; top: 8px; width: 14px; height: 10px; margin-left: -1px; border-radius: 2px; background: color-mix(in srgb, var(--k) 32%, transparent); border-left: 2px solid var(--k); transition: none; }
-.marker:hover, .marker.selected { background: color-mix(in srgb, var(--k) 70%, transparent); }
-.marker.selected { box-shadow: 0 0 0 1px var(--text); }
+/* A moment on its lane: a short bar in its colour. The button itself is as
+   tall as the lane and a little wider than the bar, so it is easy to hit;
+   the bar is drawn inside it. */
+.marker { position: absolute; top: 0; bottom: 0; width: 18px; margin-left: -3px; transition: none; }
+.marker::before { content: ""; position: absolute; left: 2px; top: 8px; width: 14px; height: 10px; border-radius: 2px; background: color-mix(in srgb, var(--k) 32%, transparent); border-left: 2px solid var(--k); }
+.marker:hover::before, .marker.selected::before { background: color-mix(in srgb, var(--k) 70%, transparent); }
+.marker.selected::before { box-shadow: 0 0 0 1px var(--text); }
 .marker.rejected { opacity: .3; }
-.marker .cap { position: absolute; left: 3px; top: -5px; width: 5px; height: 5px; border-radius: 50%; }
+.marker .cap { position: absolute; left: 5px; top: 3px; width: 5px; height: 5px; border-radius: 50%; }
 
 /* Where nobody speaks. */
 #timeline-quiet i { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(135deg, #ffffff0a 0 4px, transparent 4px 9px); }
 
-/* Kept moments, as the clips they would be cut into. */
-.clip { position: absolute; top: 5px; bottom: 5px; min-width: 3px; border-radius: var(--r-small); background: color-mix(in srgb, var(--k) 14%, transparent); backdrop-filter: brightness(2.1); box-shadow: 0 0 0 1.5px var(--k) inset; overflow: hidden; }
+/* Kept moments, as the clips they would be cut into: outlined in amber,
+   the colour of everything kept. A click selects the moment. */
+.clip { position: absolute; top: 5px; bottom: 5px; min-width: 3px; border-radius: var(--r-small); background: color-mix(in srgb, var(--accent) 12%, transparent); backdrop-filter: brightness(2.1); box-shadow: 0 0 0 1.5px var(--accent) inset; overflow: hidden; }
+.clip:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
 .clip span { position: absolute; left: 4px; top: 4px; padding: 0 5px; border-radius: 3px; background: #000000b3; font-size: 10.5px; font-weight: 500; line-height: 16px; white-space: nowrap; color: var(--text); }
 
 /* The selected moment, from its start to its end. Its two edges can be dragged. */
@@ -633,16 +726,19 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 #timeline-chat { position: absolute; left: 0; bottom: 0; width: 100%; height: 30%; display: block; opacity: .55; }
 .timeline-played { position: absolute; left: 0; top: 0; bottom: 0; background: #ffffff05; pointer-events: none; }
 
-.timeline-playhead { position: absolute; top: 0; bottom: 0; width: 1px; background: #fff; pointer-events: none; z-index: 3; }
-.timeline-playhead::before { content: ""; position: absolute; left: -5px; top: 0; width: 11px; height: 13px; background: #fff; clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%); }
+.timeline-playhead { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--now); pointer-events: none; z-index: 3; }
+.timeline-playhead::before { content: ""; position: absolute; left: -5px; top: 0; width: 11px; height: 13px; background: var(--now); clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%); }
 
 .timeline-hover { position: absolute; top: 0; bottom: 0; width: 1px; background: #ffffff40; pointer-events: none; z-index: 2; }
 .timeline-hover-card { position: absolute; bottom: calc(100% - 18px); transform: translateX(-50%); display: grid; gap: 4px; justify-items: center; padding: 4px; border-radius: var(--r-control); background: var(--raised); box-shadow: 0 0 0 1px var(--line-strong), 0 10px 30px -6px #000c; white-space: nowrap; }
-.timeline-hover-card video { width: 176px; aspect-ratio: 16 / 9; border-radius: 3px; background: #000; display: block; }
+.timeline-hover-card video { width: 128px; aspect-ratio: 16 / 9; border-radius: 3px; background: #000; display: block; }
 #timeline-hover-time { font: 500 11px var(--mono); padding: 0 4px 1px; }
 
-.timeline-foot { padding: 6px 12px 0 76px; }
-.timeline-overview { position: relative; height: 6px; border-radius: 6px; background: var(--base); cursor: pointer; }
-#timeline-overview-marks i { position: absolute; top: 1.5px; width: 3px; height: 3px; margin-left: -1.5px; border-radius: 50%; background: var(--k); }
+/* The whole video in one bar: a dot for every moment, a frame around the
+   part the timeline is zoomed in on, and a blue line where the video is. */
+.timeline-foot { padding: 4px 12px 0 76px; }
+.timeline-overview { position: relative; height: 10px; border-radius: 3px; background: var(--base); box-shadow: 0 0 0 1px var(--line) inset; cursor: pointer; }
+#timeline-overview-marks i { position: absolute; top: 3.5px; width: 3px; height: 3px; margin-left: -1.5px; border-radius: 50%; background: var(--k); }
+#timeline-overview-now { position: absolute; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--now); pointer-events: none; }
 #timeline-overview-marks i.rejected { opacity: .3; }
-.timeline-window { position: absolute; top: -2px; bottom: -2px; min-width: 6px; border-radius: 8px; box-shadow: 0 0 0 1px #ffffff40 inset; background: #ffffff0d; }
+.timeline-window { position: absolute; top: -2px; bottom: -2px; min-width: 6px; border-radius: 4px; box-shadow: 0 0 0 1px #ffffff40 inset; background: #ffffff0d; }

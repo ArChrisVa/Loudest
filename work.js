@@ -23,12 +23,20 @@ const categoryNames = document.getElementById('category-names');
 const noteInput = document.getElementById('moment-note');
 const startButton = document.getElementById('set-start');
 const endButton = document.getElementById('set-end');
+const startInput = document.getElementById('start-time');
+const endInput = document.getElementById('end-time');
+const resetRange = document.getElementById('reset-range');
+const momentSearch = document.getElementById('moment-search');
+const listeningBox = document.getElementById('listening');
+const listeningPercent = document.getElementById('listening-percent');
+const listeningLeft = document.getElementById('listening-left');
+const momentContext = document.getElementById('moment-context');
 const rangeLength = document.getElementById('range-length');
 const statusButtons = [...document.querySelectorAll('#show-status button')];
 const showOnly = document.getElementById('show-only');
 const inspectorEmpty = document.getElementById('inspector-empty');
 const removedLine = document.getElementById('removed-line');
-const rejectLabel = document.getElementById('reject-label');
+const rejectLabels = [document.getElementById('reject-label'), document.getElementById('moment-menu-reject'), document.getElementById('context-reject')];
 const timelineSelected = document.getElementById('timeline-selected');
 
 // Goes up every time a video is opened or closed, so an answer that arrives
@@ -54,8 +62,29 @@ let moments = [];
 
 // The moment the box under the list is about, or null.
 let selected = null;
-// The moment of the editor's own that was removed last, while "Undo" is on offer.
-let removed = null;
+// True right after a moment of the editor's own was removed, while "Undo" is on offer.
+let removed = false;
+// Further moments picked in the list with Ctrl or Shift and a click. Keep,
+// Reject and Take the decision back then go for all of them and the selected one.
+const picked = new Set();
+
+// Which moments the list shows by how far they are decided: 'all', 'review',
+// 'kept' or 'rejected'. The kind or category is in the hidden "show" menu,
+// and the two work together.
+let showStatus = 'all';
+
+// What the moments were before each of the editor's last changes, newest
+// last, for Undo; and what Undo took back, for Redo.
+let undoSteps = [];
+let redoSteps = [];
+
+// True from opening a video that already holds decisions until its moments
+// are all there: the list then opens on what is still to review.
+let resume = false;
+// When the listening's first report came, and how far it was: for saying how long is left.
+let listenStart = null;
+// How many moments were still to review when that was last noted for the Home screen.
+let notedToReview = null;
 
 // Every category in use, in any video: [{ name, colour }].
 let categories = [];
@@ -98,10 +127,23 @@ async function loadMoments(videoPath, atTime) {
 
   moments = [];
   selected = null;
-  removed = null;
+  removed = false;
+  picked.clear();
+  undoSteps = [];
+  redoSteps = [];
+  // What the list was narrowed to for the last video means nothing for this one.
+  showStatus = 'all';
+  showSelect.value = '';
+  momentSearch.value = '';
+  resume = false;
+  notedToReview = null;
+  listenStart = null;
   listenState = 'listening';
   saveProblem.textContent = '';
-  analysisStatus.textContent = 'Listening to the whole video…';
+  analysisStatus.textContent = '';
+  listeningPercent.textContent = '';
+  listeningLeft.textContent = 'Listening to the whole video…';
+  listeningBox.hidden = false;
   // Without a value the bar shows "busy" instead of an amount.
   analysisProgress.removeAttribute('value');
   analysisProgress.hidden = false;
@@ -115,14 +157,15 @@ async function loadMoments(videoPath, atTime) {
   moments = saved.map((record) => ({ ...record, until: record.time, signs: [record.kind], strength: 0 }));
   categories = known;
   showCategories();
-  showMoments();
 
   // Arriving from the list of kept moments: go straight to the one clicked.
   const wanted = moments.find((moment) => moment.time === atTime);
-  if (wanted) {
-    if (!visibleMoments().includes(wanted)) showSelect.value = 'all';
-    jumpTo(wanted);
-  }
+  // Coming back to a video that was being worked on: carry on with what is
+  // still to review, once the moments are all there (findAgain).
+  resume = !wanted && saved.some((record) => record.status);
+  if (resume) showStatus = 'review';
+  showMoments();
+  if (wanted) jumpTo(wanted);
 
   // A chat that was saved earlier can point at moments before the listening is done.
   findAgain();
@@ -130,6 +173,7 @@ async function loadMoments(videoPath, atTime) {
   if (thisRun !== run) return;
 
   analysisProgress.hidden = true;
+  listeningBox.hidden = true;
   listenState = outcome.error ? 'failed' : 'done';
   analysisStatus.textContent = outcome.error ?? '';
   findAgain();
@@ -143,13 +187,20 @@ async function loadMoments(videoPath, atTime) {
 window.loudest.onListenProgress(({ path, seconds }) => {
   if (path !== openPath || listenState !== 'listening') return;
   const total = player.duration;
-  let text = 'Listening… ' + formatDuration(seconds);
   if (Number.isFinite(total) && total > 0) {
     analysisProgress.max = total;
     analysisProgress.value = Math.min(seconds, total);
-    text += ' of ' + formatDuration(total);
+    listeningPercent.textContent = Math.min(99, Math.floor((seconds / total) * 100)) + '%';
+    // How long is left, worked out from how fast it has gone since the
+    // first report. Said only once there are a few seconds to judge by.
+    listenStart ??= { at: Date.now(), seconds };
+    const taken = (Date.now() - listenStart.at) / 1000;
+    const speed = (seconds - listenStart.seconds) / taken;
+    if (taken > 3 && speed > 0) {
+      const left = (total - seconds) / speed;
+      listeningLeft.textContent = left < 90 ? 'Listening · about a minute left' : `Listening · about ${Math.round(left / 60)} minutes left`;
+    }
   }
-  analysisStatus.textContent = text;
 });
 
 // ---------- Finding the moments ----------
@@ -178,9 +229,26 @@ async function findAgain() {
     // The menu offers "Chat" only when there is one.
     chatOption.hidden = !found.chat;
     chatOption.disabled = !found.chat;
-    if (!found.chat && showSelect.value === chatOption.value) showSelect.value = 'all';
+    // The Audio lane says that the green hills in it are the chat.
+    document.getElementById('chat-lane-name').hidden = !found.chat;
+    if (!found.chat && showSelect.value === chatOption.value) showSelect.value = '';
     showChat(found.chat);
     showMoments();
+
+    // Back in a video that was being worked on, with every moment there now:
+    // the first one that is still to review, ready but not playing.
+    if (resume && listenState === 'done') {
+      resume = false;
+      const first = visibleMoments()[0];
+      if (first) {
+        select(first);
+        seekTo(rangeOf(first).start);
+      } else {
+        // Nothing is left to review: show everything instead of an empty list.
+        showStatus = 'all';
+        showMoments();
+      }
+    }
   }
   finding = false;
 }
@@ -228,16 +296,35 @@ function joinFound(found) {
 // The kinds, in the order "By kind" lists them: the editor's own first.
 const KIND_ORDER = ['Added', 'Laugh', 'Scream', 'Shout', 'Raised voice', 'Chat'];
 
+// The three things the list can be narrowed by. They work together: a
+// moment is shown when it passes all of them.
+function fitsStatus(moment, status) {
+  if (status === 'review') return moment.status === '';
+  if (status === 'kept' || status === 'rejected') return moment.status === status;
+  return true;
+}
+
+// The kind or category chosen in the menu, and what is typed in the search box.
+function fitsKindAndSearch(moment) {
+  const show = showSelect.value;
+  if (show.startsWith('kind:') && !moment.signs.includes(show.slice('kind:'.length))) return false;
+  if (show.startsWith('category:') && moment.category !== show.slice('category:'.length)) return false;
+  const wanted = momentSearch.value.trim().toLowerCase();
+  if (!wanted) return true;
+  return [moment.name, moment.note, moment.category, ...moment.signs].some((text) => text.toLowerCase().includes(wanted));
+}
+
+// Makes sure the list shows this moment, by widening what it is narrowed to.
+function reveal(moment) {
+  if (visibleMoments().includes(moment)) return;
+  showStatus = 'all';
+  showSelect.value = '';
+  momentSearch.value = '';
+}
+
 // The moments the list is showing, in the order it shows them.
 function visibleMoments() {
-  const show = showSelect.value;
-  const list = moments.filter((moment) => {
-    if (show === 'review') return moment.status === '';
-    if (show === 'kept' || show === 'rejected') return moment.status === show;
-    if (show.startsWith('kind:')) return moment.signs.includes(show.slice('kind:'.length));
-    if (show.startsWith('category:')) return moment.category === show.slice('category:'.length);
-    return true;
-  });
+  const list = moments.filter((moment) => fitsKindAndSearch(moment) && fitsStatus(moment, showStatus));
 
   if (sortSelect.value === 'time') {
     list.sort((a, b) => a.time - b.time);
@@ -273,21 +360,41 @@ function buildRows(list) {
 // Called after anything about the moments changes.
 function showMoments() {
   const list = visibleMoments();
-  // A moment that the list no longer shows cannot stay selected.
+  // A moment that the list no longer shows cannot stay selected or picked.
   if (selected && !list.includes(selected)) selected = null;
+  for (const moment of [...picked]) {
+    if (!selected || moment === selected || !list.includes(moment)) picked.delete(moment);
+  }
 
-  momentCount.textContent = moments.length ? list.length : '';
+  // The tab says how many moments there are in all; the four buttons under
+  // it say how many each of them holds.
+  momentCount.textContent = moments.length || '';
   showFilter();
+  noteProgress();
   // Pictures asked for by rows that are about to go are no longer wanted.
   picturesWanted = [];
   momentList.replaceChildren(...buildRows(list));
   timeline.setMoments(list, selected, (moment) => colourOf(moment.category), rangeOf);
 
   if (listenState === 'done') {
+    const kept = moments.filter((moment) => moment.status === 'kept').length;
+    const onlyReview = showStatus === 'review' && showSelect.value === '' && momentSearch.value.trim() === '';
     if (list.length) analysisStatus.textContent = '';
-    else analysisStatus.textContent = moments.length ? 'No moments to show here.' : 'Nothing stood out in this video.';
+    else if (moments.length === 0) analysisStatus.textContent = 'Nothing stood out in this video.';
+    else if (onlyReview) analysisStatus.textContent = `All reviewed. ${kept} kept.`;
+    else analysisStatus.textContent = 'No moments to show here.';
   }
   showSelected();
+}
+
+// Tells the Home screen's card how many moments are still to review, each
+// time that number changes. Only once the moments are all there.
+function noteProgress() {
+  if (listenState !== 'done' || !openPath) return;
+  const toReview = moments.filter((moment) => moment.status === '').length;
+  if (toReview === notedToReview) return;
+  notedToReview = toReview;
+  window.loudest.noteProgress(openPath, toReview);
 }
 
 // What a moment is called: the editor's name for it, else its category, else
@@ -324,6 +431,7 @@ function buildMoment(moment) {
   // The status ('kept', 'rejected') is a style name too: kept rows get a tick, rejected ones fade.
   button.className = `moment ${styleOf(moment.kind)} ${moment.status}`;
   if (moment === selected) button.setAttribute('aria-current', 'true');
+  if (picked.has(moment)) button.classList.add('picked');
 
   const picture = document.createElement('img');
   picture.alt = '';
@@ -349,9 +457,28 @@ function buildMoment(moment) {
   const aloud = [`${time} ${text}`];
   if (moment.signs.length > 1) aloud.push(moment.signs.join(' and '));
   if (moment.status) aloud.push(moment.status);
+  if (picked.has(moment)) aloud.push('picked');
   button.setAttribute('aria-label', aloud.join(', '));
   button.append(part('span', 'shot', picture), part('span', 'text', label, sub), part('span', 'state', mark, how));
-  button.addEventListener('click', () => jumpTo(moment));
+  // A plain click goes to the moment. With Ctrl it is picked as well as the
+  // selected one (or let go again), with Shift everything from the selected
+  // one to it is picked, as in a list of files.
+  button.addEventListener('click', (event) => {
+    if (selected && moment !== selected && (event.ctrlKey || event.shiftKey)) {
+      if (event.shiftKey) {
+        const list = visibleMoments();
+        const [from, to] = [list.indexOf(selected), list.indexOf(moment)].sort((a, b) => a - b);
+        for (const between of list.slice(from, to + 1)) if (between !== selected) picked.add(between);
+      } else if (!picked.delete(moment)) {
+        picked.add(moment);
+      }
+      showMoments();
+      return;
+    }
+    picked.clear();
+    jumpTo(moment);
+  });
+  button.addEventListener('contextmenu', (event) => openContext(event, moment));
 
   item.append(button);
   return item;
@@ -438,29 +565,36 @@ pictureSource.addEventListener('loadedmetadata', nextPicture);
 
 // ---------- Which moments to show ----------
 
-const STATUS_CHOICES = ['all', 'review', 'kept', 'rejected'];
-
-// The hidden "show" menu holds the choice. This puts it on the four buttons
-// and on the menu beside them, which offers the kinds and the categories.
+// Lights the one of the four buttons that is chosen and writes on each how
+// many moments it holds (of the kind and search chosen), so it can be seen
+// how many are left. And copies what the hidden "show" menu offers to the
+// menu that is seen, leaving out what is switched off (Chat, with no chat).
 function showFilter() {
-  for (const button of statusButtons) button.setAttribute('aria-pressed', button.dataset.show === showSelect.value);
-  const others = [...showSelect.options].filter((option) => !STATUS_CHOICES.includes(option.value) && !option.hidden);
-  showOnly.replaceChildren(new Option('Any kind', ''), ...others.map((option) => new Option(option.textContent, option.value)));
-  showOnly.value = others.some((option) => option.value === showSelect.value) ? showSelect.value : '';
+  const inScope = moments.filter(fitsKindAndSearch);
+  for (const button of statusButtons) {
+    button.setAttribute('aria-pressed', button.dataset.show === showStatus);
+    const count = inScope.filter((moment) => fitsStatus(moment, button.dataset.show)).length;
+    button.querySelector('em').textContent = moments.length ? count : '';
+  }
+  const offered = [...showSelect.options].filter((option) => !option.hidden);
+  showOnly.replaceChildren(...offered.map((option) => new Option(option.textContent, option.value)));
+  showOnly.value = showSelect.value;
 }
 
 for (const button of statusButtons) {
   button.addEventListener('click', () => {
-    showSelect.value = button.dataset.show;
+    showStatus = button.dataset.show;
     showMoments();
   });
 }
 
 showOnly.addEventListener('change', () => {
-  showSelect.value = showOnly.value || 'all';
+  showSelect.value = showOnly.value;
   showOnly.blur();
   showMoments();
 });
+
+momentSearch.addEventListener('input', showMoments);
 
 function colourOf(categoryName) {
   return categories.find((category) => category.name === categoryName)?.colour || '';
@@ -480,7 +614,7 @@ function showCategories() {
   else categoryOptions.remove();
   // Keep what was chosen, unless that category has just gone.
   const stillThere = [...showSelect.options].some((option) => option.value === chosen);
-  showSelect.value = stillThere ? chosen : 'all';
+  showSelect.value = stillThere ? chosen : '';
 }
 
 // Where a moment starts and ends: where the editor put it, or else a little
@@ -498,8 +632,9 @@ function rangeOf(moment) {
 function showSelected() {
   inspector.hidden = !selected;
   // With nothing selected: the offer to undo a removal, or else the hint.
+  // While there are no moments yet there is nothing to pick, so no hint.
   removedLine.hidden = Boolean(selected) || !removed;
-  inspectorEmpty.hidden = Boolean(selected) || Boolean(removed);
+  inspectorEmpty.hidden = Boolean(selected) || removed || moments.length === 0;
   timeline.setRange(selected ? rangeOf(selected) : null);
   timelineSelected.replaceChildren();
   if (!selected) return;
@@ -509,8 +644,10 @@ function showSelected() {
   const own = selected.kind === 'Added';
   inspectorKind.textContent = own ? 'Added by you' : selected.signs.join(' + ');
   keepButton.setAttribute('aria-pressed', selected.status === 'kept');
+  document.getElementById('keep-label').textContent = selected.status === 'kept' ? 'Kept' : 'Keep';
   rejectButton.setAttribute('aria-pressed', selected.status === 'rejected');
-  rejectLabel.textContent = own ? 'Remove' : 'Reject';
+  // The same word in the box, in the Moment menu and in the right-click menu.
+  for (const label of rejectLabels) label.textContent = own ? 'Remove' : 'Reject';
   rejectButton.title = own ? 'Remove this moment of yours (X or Delete)' : 'Reject, and go to the next (X or Delete)';
   // A box that is being typed in is left alone.
   if (document.activeElement !== nameInput) nameInput.value = selected.name;
@@ -518,9 +655,12 @@ function showSelected() {
   if (document.activeElement !== noteInput) noteInput.value = selected.note;
 
   const range = rangeOf(selected);
-  startButton.textContent = formatDuration(range.start);
-  endButton.textContent = formatDuration(range.end);
-  rangeLength.textContent = Math.round(range.end - range.start) + ' s';
+  if (document.activeElement !== startInput) startInput.value = formatDuration(range.start);
+  if (document.activeElement !== endInput) endInput.value = formatDuration(range.end);
+  // Worked out from the two times as they are shown (whole seconds), so the
+  // three numbers always agree.
+  rangeLength.textContent = Math.floor(range.end) - Math.floor(range.start) + ' s';
+  resetRange.hidden = selected.start === null && selected.end === null;
   // Above the timeline: which moment the white band is, and from when to when.
   timelineSelected.append(
     part('b', '', labelOf(selected)),
@@ -528,14 +668,55 @@ function showSelected() {
   );
 }
 
+// ---------- Undo and redo ----------
+
+// The moments as they are now, and which one is selected.
+function snapshot() {
+  return { moments: JSON.stringify(moments), selected: moments.indexOf(selected) };
+}
+
+// Called right before each change the editor makes to the moments, so Undo
+// can put back what was there.
+function remember() {
+  undoSteps.push(snapshot());
+  if (undoSteps.length > 100) undoSteps.shift();
+  redoSteps = [];
+}
+
+// Puts back the newest of `from` and notes what is there now in `to`.
+function restore(from, to) {
+  const step = from.pop();
+  if (!step) return;
+  to.push(snapshot());
+  moments = JSON.parse(step.moments);
+  selected = moments[step.selected] ?? null;
+  picked.clear();
+  removed = false;
+  if (selected) reveal(selected);
+  saveWork();
+  showMoments();
+  // What nobody touched is found again, in case the slider has moved since.
+  findAgain();
+}
+
+function undo() {
+  restore(undoSteps, redoSteps);
+}
+
+function redo() {
+  restore(redoSteps, undoSteps);
+}
+
 // ---------- Working on the moments ----------
 
 function select(moment) {
   selected = moment;
   // Going on to another moment ends the offer to undo a removal.
-  removed = null;
+  removed = false;
   showMoments();
   momentList.querySelector('[aria-current]')?.scrollIntoView({ block: 'nearest' });
+  // In a long video a moment is a sliver on the timeline: look closer.
+  timeline.reveal(rangeOf(moment));
 }
 
 // Selects a moment, goes to its start, and plays it.
@@ -550,53 +731,84 @@ function jumpTo(moment) {
 function stepMoment(direction) {
   const list = visibleMoments();
   const target = selected ? list[list.indexOf(selected) + direction] : list[0];
-  if (target) jumpTo(target);
+  if (target) {
+    picked.clear();
+    jumpTo(target);
+  }
 }
 
-// Keeps or rejects the selected moment and moves on to the next row, so a
-// whole list can be gone through with one key per moment. Doing the same
-// thing to a moment a second time takes the decision back, and stays.
+// The moment that starts next after where the video is now (direction 1) or
+// last before it (-1), whatever order the list is in. For the two buttons
+// either side of the skip buttons, which point along the video.
+function stepInTime(direction) {
+  const now = seekWanted ?? player.currentTime;
+  const starts = visibleMoments().map((moment) => ({ moment, start: rangeOf(moment).start })).sort((a, b) => a.start - b.start);
+  // A little slack: playing has moved on a bit from the start it was sent to.
+  const target = direction > 0
+    ? starts.find(({ start }) => start > now + 0.5)
+    : starts.findLast(({ start }) => start < now - 1.5);
+  if (target) {
+    picked.clear();
+    jumpTo(target.moment);
+  }
+}
+
+// The selected moment and the ones picked with it.
+function chosen() {
+  return selected ? [selected, ...picked] : [];
+}
+
+// Keeps or rejects the selected moment (and any picked with it) and moves on
+// to the next row, so a whole list can be gone through with one key per
+// moment. Doing the same thing again changes nothing; U takes a decision back.
 function decide(status) {
   if (!selected) return;
+  const group = chosen();
   // Rejecting a moment of one's own would only leave it lying in the list.
-  if (status === 'rejected' && selected.kind === 'Added') {
+  if (status === 'rejected' && group.length === 1 && selected.kind === 'Added') {
     removeSelected();
     return;
   }
   const list = visibleMoments();
-  const next = list[list.indexOf(selected) + 1];
-  const takingBack = selected.status === status;
+  const next = list.slice(list.indexOf(selected) + 1).find((moment) => !group.includes(moment));
+  const going = status === 'rejected' ? group.filter((moment) => moment.kind === 'Added') : [];
+  const changing = group.filter((moment) => moment.status !== status && !going.includes(moment));
 
-  selected.status = takingBack ? '' : status;
-  saveWork();
-  if (!takingBack && next) jumpTo(next);
+  if (changing.length || going.length) {
+    remember();
+    for (const moment of changing) moment.status = status;
+    moments = moments.filter((moment) => !going.includes(moment));
+    saveWork();
+  }
+  picked.clear();
+  if (next) jumpTo(next);
   else showMoments();
 }
 
-// Takes the selected moment, one the editor added, out of the video's
-// moments altogether. Its name, note and edges go with it, so it is held on
-// to and "Undo" is offered where its details were, until another moment is
-// selected or another video is opened.
-function removeSelected() {
-  removed = selected;
-  moments = moments.filter((moment) => moment !== removed);
-  selected = null;
+// Makes the selected moment (and any picked with it) undecided again.
+function clearDecision() {
+  const changing = chosen().filter((moment) => moment.status !== '');
+  if (!changing.length) return;
+  remember();
+  for (const moment of changing) moment.status = '';
   saveWork();
   showMoments();
 }
 
-function undoRemove() {
-  if (!removed) return;
-  const back = removed;
-  moments.push(back);
-  // A choice such as "Rejected" would hide it, and it would seem nothing happened.
-  if (!visibleMoments().includes(back)) showSelect.value = 'all';
+// Takes the selected moment, one the editor added, out of the video's
+// moments altogether. "Undo" is offered where its details were, until
+// another moment is selected or another video is opened; Ctrl+Z does the same.
+function removeSelected() {
+  remember();
+  moments = moments.filter((moment) => moment !== selected);
+  selected = null;
+  removed = true;
   saveWork();
-  select(back);
+  showMoments();
 }
 
 // A moment of the editor's own, where the video is now. It starts out kept:
-// nobody marks a spot they do not want.
+// nobody marks a spot they do not want. The name box is ready to be typed in.
 function addMoment() {
   if (!Number.isFinite(player.duration)) return;
   const time = Math.round(player.currentTime * 100) / 100;
@@ -613,12 +825,27 @@ function addMoment() {
     start: null,
     end: null,
   };
+  remember();
   moments.push(moment);
+  picked.clear();
   // A choice such as "Rejected" would hide it, and it would seem nothing happened.
-  if (!visibleMoments().includes(moment)) showSelect.value = 'all';
+  reveal(moment);
   saveWork();
   select(moment);
+  nameMoment();
 }
+
+// Puts the keyboard in the Name box of the selected moment. Enter there
+// saves the name and hands the keyboard back.
+function nameMoment() {
+  if (!selected) return;
+  nameInput.focus();
+  nameInput.select();
+}
+
+// The edge that is being dragged, from the first move until it is let go:
+// the whole drag is one step for Undo.
+let dragging = false;
 
 // Moves where the selected moment starts or ends ('start' or 'end') to
 // `seconds`. The other end makes room if it has to, so a moment is never
@@ -628,7 +855,11 @@ function setEdge(edge, seconds, finished = true) {
   if (!selected) return;
   const SHORTEST = 1;
   const range = rangeOf(selected);
-  const at = Math.round(Math.max(0, seconds) * 100) / 100;
+  const length = Number.isFinite(player.duration) ? player.duration : Infinity;
+  const at = Math.round(Math.min(Math.max(0, seconds), length) * 100) / 100;
+
+  if (!dragging) remember();
+  dragging = !finished;
 
   if (edge === 'start') {
     selected.start = at;
@@ -640,6 +871,50 @@ function setEdge(edge, seconds, finished = true) {
   if (finished) saveWork();
   showSelected();
 }
+
+// What was typed as a time, in seconds: "1:02:03", "62:03" or "45". Null
+// when it is not a time.
+function parseTime(text) {
+  const parts = text.trim().split(':');
+  if (parts.length > 3 || parts.some((piece) => !/^\d+([.,]\d+)?$/.test(piece))) return null;
+  return parts.reduce((total, piece) => total * 60 + Number(piece.replace(',', '.')), 0);
+}
+
+// The two boxes with the start and the end. A time typed in is taken when
+// the box is left or Enter is pressed; Escape puts back what was there. The
+// up and down keys move the edge a second at a time, and the picture follows.
+for (const [box, edge] of [[startInput, 'start'], [endInput, 'end']]) {
+  box.addEventListener('change', () => {
+    const seconds = parseTime(box.value);
+    if (selected && seconds !== null) setEdge(edge, seconds);
+    // Shows it the way Loudest writes times, or puts back what was there.
+    if (selected) box.value = formatDuration(rangeOf(selected)[edge]);
+  });
+  box.addEventListener('keydown', (event) => {
+    if (!selected) return;
+    const nudge = { ArrowUp: 1, ArrowDown: -1 }[event.key];
+    if (nudge) {
+      event.preventDefault();
+      // From the whole second, so that the time shown changes with every press.
+      const seconds = Math.floor(rangeOf(selected)[edge]) + nudge;
+      setEdge(edge, seconds);
+      box.value = formatDuration(rangeOf(selected)[edge]);
+      seekTo(rangeOf(selected)[edge]);
+    }
+    if (event.key === 'Escape') box.value = formatDuration(rangeOf(selected)[edge]);
+    if (event.key === 'Escape' || event.key === 'Enter') box.blur();
+  });
+}
+
+// Back to where the moment started and ended before the editor moved them.
+resetRange.addEventListener('click', () => {
+  if (!selected) return;
+  remember();
+  selected.start = null;
+  selected.end = null;
+  saveWork();
+  showMoments();
+});
 
 // Saves the editor's work on this video: the moments they added and the ones
 // they decided on, named, noted, put in a category or changed the length of.
@@ -664,6 +939,7 @@ async function saveWork() {
 
 nameInput.addEventListener('change', () => {
   if (!selected) return;
+  remember();
   selected.name = nameInput.value.trim();
   saveWork();
   showMoments();
@@ -674,6 +950,7 @@ categoryInput.addEventListener('change', () => {
   const typed = categoryInput.value.trim();
   // "funny" means the "Funny" that already exists.
   const existing = categories.find((category) => category.name.toLowerCase() === typed.toLowerCase());
+  remember();
   selected.category = existing ? existing.name : typed;
   saveWork();
   showMoments();
@@ -681,6 +958,7 @@ categoryInput.addEventListener('change', () => {
 
 noteInput.addEventListener('change', () => {
   if (!selected) return;
+  remember();
   selected.note = noteInput.value.trim();
   saveWork();
 });
@@ -697,11 +975,41 @@ for (const [box, field] of [[nameInput, 'name'], [categoryInput, 'category'], [n
 
 keepButton.addEventListener('click', () => decide('kept'));
 rejectButton.addEventListener('click', () => decide('rejected'));
-document.getElementById('undo-remove').addEventListener('click', undoRemove);
+document.getElementById('undo-remove').addEventListener('click', undo);
 startButton.addEventListener('click', () => setEdge('start', player.currentTime));
 endButton.addEventListener('click', () => setEdge('end', player.currentTime));
 
-timeline.onMoment = jumpTo;
+// ---------- The timeline, and the right-click menu ----------
+
+function zoomToSelected() {
+  if (selected) timeline.zoomTo(rangeOf(selected));
+}
+
+// A right-click on a moment, in the list or on the timeline, opens the small
+// menu where the mouse is. The moment is selected first (without playing it),
+// unless it is one of several that are picked: then the menu is about all of
+// them. menus.js makes the menu work, like the ones in the top bar.
+function openContext(event, moment) {
+  event.preventDefault();
+  if (!chosen().includes(moment)) {
+    picked.clear();
+    select(moment);
+    seekTo(rangeOf(moment).start);
+  }
+  momentContext.showPopover();
+  // Where the mouse is, but never sticking out of the window.
+  const box = momentContext.getBoundingClientRect();
+  momentContext.style.left = Math.max(0, Math.min(event.clientX, window.innerWidth - box.width - 6)) + 'px';
+  momentContext.style.top = Math.max(0, Math.min(event.clientY, window.innerHeight - box.height - 6)) + 'px';
+}
+
+timeline.onMoment = (moment) => {
+  picked.clear();
+  // The list may be narrowed to something else; the timeline shows only
+  // what the list shows, so this is always one of its rows.
+  jumpTo(moment);
+};
+timeline.onContext = openContext;
 // Dragging an edge of the selected moment's band on the strip. The picture
 // follows the edge, so it is clear where the cut will be.
 timeline.onRange = (edge, seconds, finished) => {
@@ -717,6 +1025,8 @@ for (const menu of [showSelect, sortSelect]) {
     showMoments();
   });
 }
+// The order of the list is remembered for next time (extras.js puts it back).
+sortSelect.addEventListener('change', () => window.loudest.setSettings({ sort: sortSelect.value }));
 
 // The slider finds more or fewer moments as it moves, and the choice is
 // remembered when it is let go.

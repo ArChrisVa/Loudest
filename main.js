@@ -57,6 +57,8 @@ const STATUSES = ['', 'kept', 'rejected'];
 const LANGUAGES = ['el', 'en', 'auto'];
 // The jumps the menu beside the speed offers, in seconds (index.html).
 const SKIP_CHOICES = [1, 5, 10, 30];
+// The orders the list of moments can be in.
+const SORTS = ['strength', 'time', 'kind'];
 // How big everything in the window can be drawn: 1 is the normal size, and
 // View, Bigger text goes up from there one step at a time.
 const SIZES = [1, 1.1, 1.2, 1.3, 1.4, 1.5];
@@ -160,6 +162,22 @@ ipcMain.handle('recent:save', (event, details) => {
   return forWindow(entry);
 });
 
+// Notes how many of a video's moments are still to review, for its card on
+// the Home screen. The window says so while the video is open; this does not
+// count as opening it.
+ipcMain.handle('recent:progress', (event, videoPath, toReview) => {
+  needVideoPath(videoPath);
+  const list = readRecent();
+  const entry = list.find((item) => item.path === videoPath);
+  if (!entry || !Number.isInteger(toReview) || toReview < 0) return;
+  entry.toReview = toReview;
+  try {
+    writeJson(recentFile, list);
+  } catch (error) {
+    console.error('Could not save the list of recent videos:', error);
+  }
+});
+
 // Forgets a video and everything saved about it, including the editor's work.
 // The video file itself is not touched. The window asks before calling this
 // when there is work to lose.
@@ -191,6 +209,8 @@ function readSettings() {
       : app.getPreferredSystemLanguages().some((language) => language.startsWith('el')) ? 'el' : 'auto',
     // How many seconds the two skip buttons under the picture jump.
     skip: SKIP_CHOICES.includes(saved?.skip) ? saved.skip : 5,
+    // The order of the list of moments.
+    sort: SORTS.includes(saved?.sort) ? saved.sort : 'strength',
     // How big everything is drawn, one of SIZES.
     size: SIZES.includes(saved?.size) ? saved.size : 1,
     // The version of Loudest that last ran here, so that after an update
@@ -204,8 +224,8 @@ ipcMain.handle('settings:get', () => readSettings());
 ipcMain.handle('settings:set', (event, changes) => {
   // The size is not among these: it changes through 'size:change' below,
   // which changes the window with it.
-  const { sensitivity, leadIn, language, skip, seenVersion } = { ...readSettings(), ...changes };
-  writeJson(settingsFile, { sensitivity, leadIn, language, skip, seenVersion, size: readSettings().size });
+  const { sensitivity, leadIn, language, skip, sort, seenVersion } = { ...readSettings(), ...changes };
+  writeJson(settingsFile, { sensitivity, leadIn, language, skip, sort, seenVersion, size: readSettings().size });
   // Read back, so that anything out of range comes back corrected.
   return readSettings();
 });
@@ -577,6 +597,29 @@ ipcMain.handle('chat:fromLink', async (event, videoPath, link) => {
 
 ipcMain.handle('chat:cancel', () => cancelDownload());
 
+// What the chat was writing around `seconds` into the video, for the Chat
+// tab: the messages of the twenty seconds before and after, at most thirty
+// each way, as [[seconds, text], ...].
+ipcMain.handle('chat:around', (event, videoPath, seconds) => {
+  needVideoPath(videoPath);
+  const REACH = 20; // seconds
+  const MOST = 30; // messages each way
+  const at = Number.isFinite(seconds) ? seconds : 0;
+  const chat = readChat(videoPath);
+  // The chat is in time order, so the first message after `at` is found by
+  // halving, which stays quick in a chat of a million messages.
+  let low = 0;
+  let high = chat.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (chat[middle][0] <= at) low = middle + 1;
+    else high = middle;
+  }
+  const before = chat.slice(Math.max(0, low - MOST), low).filter(([time]) => time >= at - REACH);
+  const after = chat.slice(low, low + MOST).filter(([time]) => time <= at + REACH);
+  return [...before, ...after];
+});
+
 ipcMain.handle('chat:remove', (event, videoPath) => {
   needVideoPath(videoPath);
   fs.rmSync(savedFile(chatFolder, videoPath), { force: true });
@@ -654,6 +697,20 @@ function windowOf(event) {
   return BrowserWindow.fromWebContents(event.sender);
 }
 
+// The file or folder the last export wrote, for "Show in folder". It is kept
+// here and not handed to the window, so the window cannot ask for any other
+// place to be opened.
+let lastExport = '';
+
+ipcMain.handle('export:show', () => {
+  if (!lastExport || !fs.existsSync(lastExport)) return;
+  if (fs.statSync(lastExport).isDirectory()) shell.openPath(lastExport);
+  else shell.showItemInFolder(lastExport);
+});
+
+// Stops the cutting of clips that is going on, if any.
+ipcMain.handle('export:cancel', () => cancelClips());
+
 // Writes the moments as markers for an editing program. `format` is
 // 'resolve' (an EDL of markers) or 'premiere' (a timeline with the video on
 // it and the markers above). Answers { saved: path }, { cancelled } or { error }.
@@ -675,6 +732,7 @@ ipcMain.handle('export:markers', async (event, videoPath, format, list) => {
       ? resolveEdl(moments, video, colours)
       : premiereXml(moments, { ...video, path: videoPath }, colours);
     fs.writeFileSync(choice.filePath, text);
+    lastExport = choice.filePath;
     return { saved: choice.filePath };
   } catch (error) {
     console.error('Could not export the markers:', error);
@@ -700,6 +758,7 @@ ipcMain.handle('export:clips', async (event, videoPath, list) => {
     const folder = await cutClips(videoPath, moments, choice.filePaths[0], (done) => {
       tellWindow('clips:progress', { done, total: moments.length });
     });
+    lastExport = folder;
     return { folder, count: moments.length };
   } catch (error) {
     if (error.cancelled) return { cancelled: true };
