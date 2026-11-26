@@ -340,6 +340,7 @@ function buildMoment(moment) {
 const pictureSource = document.createElement('video');
 const pictures = new Map(); // whole second -> the picture, as a data: address
 let picturesWanted = []; // [{ second, image }], the next one first
+let filmWanted = []; // the same, for the pictures along the timeline; these go first
 let pictureJob = null; // the one the player has been sent to
 
 pictureSource.muted = true;
@@ -348,6 +349,7 @@ pictureSource.preload = 'metadata';
 function setPictureSource(url) {
   pictures.clear();
   picturesWanted = [];
+  filmWanted = [];
   pictureJob = null;
   if (url) {
     pictureSource.src = url;
@@ -370,10 +372,21 @@ function showPicture(image, seconds) {
   nextPicture();
 }
 
+// The timeline hands over, each time it is drawn, every picture its film
+// still misses: [{ second, image }], from left to right. The new list takes
+// the place of the last one, so pictures for a part that has been zoomed or
+// slid away from are no longer fetched. They go before the list's pictures:
+// there are few of them, and the list can have a hundred.
+function showFilmPictures(wanted) {
+  filmWanted = wanted;
+  nextPicture();
+}
+
 function nextPicture() {
-  // Nothing to do, busy, or there is no picture to copy (not loaded yet, or sound only).
-  if (pictureJob || picturesWanted.length === 0 || pictureSource.videoWidth === 0) return;
-  pictureJob = picturesWanted.shift();
+  // Busy, or there is no picture to copy (not loaded yet, or sound only).
+  if (pictureJob || pictureSource.videoWidth === 0) return;
+  pictureJob = filmWanted.shift() ?? picturesWanted.shift() ?? null;
+  if (!pictureJob) return;
   if (pictures.has(pictureJob.second)) pictureArrived();
   else pictureSource.currentTime = pictureJob.second + 0.05;
 }

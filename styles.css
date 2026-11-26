@@ -467,6 +467,14 @@ progress:indeterminate { background: linear-gradient(90deg, var(--hover) 0 40%, 
 .lane { position: relative; min-height: 0; overflow: hidden; }
 #timeline-markers, #timeline-quiet, #timeline-clips { position: absolute; inset: 0; }
 
+/* The video itself along its lane, as a row of its pictures. It is dimmed,
+   and a clip lying on it lights its own stretch up again (backdrop-filter
+   changes what is seen through an element). A picture that has not been
+   fetched yet is an empty tile. Clicks go through to the timeline. */
+#timeline-film { position: absolute; inset: 5px 0; opacity: .42; pointer-events: none; }
+#timeline-film i { position: absolute; top: 0; bottom: 0; background: var(--hover); overflow: hidden; }
+#timeline-film img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
 /* A moment on its lane: a short bar in its colour. */
 .marker { position: absolute; top: 8px; width: 14px; height: 10px; margin-left: -1px; border-radius: 2px; background: color-mix(in srgb, var(--k) 32%, transparent); border-left: 2px solid var(--k); transition: none; }
 .marker:hover, .marker.selected { background: color-mix(in srgb, var(--k) 70%, transparent); }
@@ -478,11 +486,11 @@ progress:indeterminate { background: linear-gradient(90deg, var(--hover) 0 40%, 
 #timeline-quiet i { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(135deg, #ffffff0a 0 4px, transparent 4px 9px); }
 
 /* Kept moments, as the clips they would be cut into. */
-.clip { position: absolute; top: 5px; bottom: 5px; min-width: 3px; border-radius: var(--r-small); background: color-mix(in srgb, var(--k) 26%, var(--raised)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--k) 60%, transparent) inset; overflow: hidden; }
-.clip span { position: absolute; left: 6px; top: 4px; font-size: 10.5px; font-weight: 500; white-space: nowrap; color: var(--text); }
+.clip { position: absolute; top: 5px; bottom: 5px; min-width: 3px; border-radius: var(--r-small); background: color-mix(in srgb, var(--k) 14%, transparent); backdrop-filter: brightness(2.1); box-shadow: 0 0 0 1.5px var(--k) inset; overflow: hidden; }
+.clip span { position: absolute; left: 4px; top: 4px; padding: 0 5px; border-radius: 3px; background: #000000b3; font-size: 10.5px; font-weight: 500; line-height: 16px; white-space: nowrap; color: var(--text); }
 
 /* The selected moment, from its start to its end. Its two edges can be dragged. */
-.timeline-range { position: absolute; top: 3px; bottom: 3px; border-radius: var(--r-small); box-shadow: 0 0 0 2px var(--text) inset; background: #ffffff10; pointer-events: none; }
+.timeline-range { position: absolute; top: 3px; bottom: 3px; border-radius: var(--r-small); box-shadow: 0 0 0 2px var(--text) inset; backdrop-filter: brightness(2.3); pointer-events: none; }
 .timeline-range .handle { position: absolute; top: 0; bottom: 0; width: 8px; background: var(--text) linear-gradient(#0009, #0009) center / 2px 14px no-repeat; cursor: ew-resize; pointer-events: auto; }
 .timeline-range .handle[data-edge="start"] { left: 0; border-radius: var(--r-small) 0 0 var(--r-small); }
 .timeline-range .handle[data-edge="end"] { right: 0; border-radius: 0 var(--r-small) var(--r-small) 0; }

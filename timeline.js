@@ -1,7 +1,7 @@
 // The timeline at the bottom of the work screen: the video laid out from left
 // to right, with a ruler, the playhead, and three lanes: a marker for every
-// moment, the kept moments as the clips they would be cut into, and how loud
-// the sound is.
+// moment, the video as a row of its pictures with the kept moments on it as
+// the clips they would be cut into, and how loud the sound is.
 //
 //   click or drag      jump to that point
 //   point at it        shows the time and the picture there
@@ -33,6 +33,7 @@ const timeline = (() => {
   const played = document.getElementById('timeline-played');
   const rangeBand = document.getElementById('timeline-range');
   const markerLayer = document.getElementById('timeline-markers');
+  const filmLayer = document.getElementById('timeline-film');
   const clipLayer = document.getElementById('timeline-clips');
   const soundCanvas = document.getElementById('timeline-sound');
   const hover = document.getElementById('timeline-hover');
@@ -50,6 +51,7 @@ const timeline = (() => {
   const TICK_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200];
   const LABEL_ROOM = 90; // pixels
   const CHAT_BIN = 10; // seconds per number of the chat's busyness
+  const FILM_SHAPE = 16 / 9; // how wide a picture of the film is for its height
 
   const api = { onSeek() {}, onMoment() {}, onRange() {} };
   let duration = 0;
@@ -58,6 +60,8 @@ const timeline = (() => {
   let time = 0;
   let markers = []; // [{ moment, element }]
   let clips = []; // [{ moment, element }], one per kept moment
+  const film = new Map(); // the pictures along the Video lane: which one, counted from the video's start -> its tile
+  let filmEach = 0; // how many seconds of video one of those pictures stands for
   let shown = { moments: [], selected: null, colourFor: () => '', rangeFor: null }; // what was last asked for
   let sound = { level: [], seconds: 1, quietest: 0, loudest: 1 };
   let quiet = []; // [{ start, end, element }]
@@ -82,6 +86,7 @@ const timeline = (() => {
     drawRuler();
     drawChat();
     drawSound();
+    drawFilm();
     for (const { moment, element } of clips) {
       const span = shown.rangeFor(moment);
       stretch(element, span.start, span.end);
@@ -184,6 +189,56 @@ const timeline = (() => {
       pen.fillStyle = inMoment ? '#c9cad3' : '#3a3c45';
       pen.fillRect(x, (height - tall) / 2, 1, tall);
     }
+  }
+
+  // The video itself along its lane, as a row of its pictures side by side.
+  // Each picture stands for the stretch of video under it and shows a frame
+  // from inside that stretch. The frames are fetched one at a time by
+  // work.js (showFilmPictures), so a picture starts as an empty tile.
+  function drawFilm() {
+    const wide = Math.round(filmLayer.clientHeight * FILM_SHAPE);
+    if (!wide) return;
+    // Seconds of video per picture. Rounded, so that sliding along at the
+    // same zoom gives exactly the same number and keeps the tiles.
+    const each = Math.round(((viewEnd - viewStart) / width()) * wide * 1000) / 1000;
+    if (each !== filmEach) {
+      // Zoomed: every picture now stands for a different stretch.
+      film.clear();
+      filmLayer.replaceChildren();
+      filmEach = each;
+    }
+    // Frames are taken at round times (every 1, 2, 4, 8... seconds: the
+    // largest such step that still gives each picture its own frame), so
+    // after a zoom most of the frames wanted are ones already fetched.
+    const step = Math.max(1, 2 ** Math.floor(Math.log2(each)));
+    const lastFrame = Math.max(0, Math.floor(duration) - 1);
+    const first = Math.floor(viewStart / each);
+    const last = Math.ceil(Math.min(viewEnd, duration) / each) - 1;
+
+    for (const [n, tile] of film) {
+      if (n >= first && n <= last) continue;
+      tile.remove();
+      film.delete(n);
+    }
+    const missing = [];
+    for (let n = first; n <= last; n++) {
+      let tile = film.get(n);
+      if (!tile) {
+        tile = document.createElement('i');
+        const picture = document.createElement('img');
+        picture.alt = '';
+        picture.hidden = true;
+        tile.append(picture);
+        // One pixel narrower than its place, which leaves a line between pictures.
+        tile.style.width = wide - 1 + 'px';
+        filmLayer.append(tile);
+        film.set(n, tile);
+      }
+      tile.style.left = toX(n * each) + 'px';
+      const picture = tile.firstChild;
+      if (picture.hidden) missing.push({ second: Math.min(Math.ceil((n * each) / step) * step, lastFrame), image: picture });
+    }
+    showFilmPictures(missing);
   }
 
   // ---------- The mouse ----------
@@ -319,6 +374,9 @@ const timeline = (() => {
       preview.removeAttribute('src');
       preview.load();
     }
+    // The film's pictures were the last video's.
+    film.clear();
+    filmLayer.replaceChildren();
     api.setQuiet([]);
     api.setChat([]);
     api.setSound([], 1);
