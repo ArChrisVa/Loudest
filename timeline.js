@@ -251,8 +251,11 @@ const timeline = (() => {
       }
       tile.style.left = toX(n * each) + 'px';
       const picture = tile.firstChild;
-      if (picture.hidden) missing.push({ second: Math.min(Math.ceil((n * each) / step) * step, lastFrame), image: picture });
+      if (picture.hidden) missing.push({ second: Math.min(Math.ceil((n * each) / step) * step, lastFrame), image: picture, middle: (n + 0.5) * each });
     }
+    // The pictures nearest to where the video is are fetched first: that is
+    // where the eye is after a jump.
+    missing.sort((a, b) => Math.abs(a.middle - time) - Math.abs(b.middle - time));
     showFilmPictures(missing);
   }
 

@@ -484,11 +484,13 @@ function buildMoment(moment) {
   return item;
 }
 
-// ---------- The small pictures in the list ----------
+// ---------- The small pictures in the list and along the timeline ----------
 
-// A second, silent player that is sent to one moment after the other and
-// has its picture copied. Jumping takes it a moment, so the pictures arrive
-// one by one; each is kept, so a row that is drawn again has it at once.
+// A second, silent player that is sent to one place after the other and
+// has its picture copied. A jump takes it about a sixth of a second in a
+// long recording, so the pictures arrive one by one; each is kept, so a row
+// or a tile that is drawn again has it at once. (Several such players side
+// by side were tried and measured: together they fetch no faster than one.)
 const pictureSource = document.createElement('video');
 const pictures = new Map(); // whole second -> the picture, as a data: address
 let picturesWanted = []; // [{ second, image }], the next one first
@@ -525,7 +527,8 @@ function showPicture(image, seconds) {
 }
 
 // The timeline hands over, each time it is drawn, every picture its film
-// still misses: [{ second, image }], from left to right. The new list takes
+// still misses: [{ second, image }], the ones nearest to where the video is
+// first. The new list takes
 // the place of the last one, so pictures for a part that has been zoomed or
 // slid away from are no longer fetched. They go before the list's pictures:
 // there are few of them, and the list can have a hundred.
