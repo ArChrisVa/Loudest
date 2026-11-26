@@ -1,9 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-  <!-- The 16-pixel size: the lens, the loud bar two pixels wide, and a dot
-       either side of it. Every part sits on whole pixels. -->
-  <rect width="16" height="16" rx="3.5" fill="#0a0b0d"/>
-  <rect x=".5" y=".5" width="15" height="15" rx="3" fill="none" stroke="#ecebe4" stroke-opacity=".18"/>
-  <circle cx="8" cy="8" r="5" fill="none" stroke="#ecebe4" stroke-width="2"/>
-  <path d="M5.5 7.5 V8.5 M10.5 7.5 V8.5" fill="none" stroke="#ecebe4" stroke-width="1" stroke-linecap="round"/>
-  <path d="M8 6.5 V9.5" fill="none" stroke="#e6b455" stroke-width="2" stroke-linecap="round"/>
+  <!-- The 16-pixel size: the lens with a ring of a pixel and a half, the
+       loud bar two pixels wide, and a small bar either side of it. -->
+  <circle cx="8" cy="8" r="8" fill="#0a0b0d"/>
+  <circle cx="8" cy="8" r="7.25" fill="none" stroke="#ecebe4" stroke-width="1.5"/>
+  <path d="M4.5 7.5 V8.5 M11.5 7.5 V8.5" fill="none" stroke="#ecebe4" stroke-width="1" stroke-linecap="round"/>
+  <path d="M8 5.5 V10.5" fill="none" stroke="#e6b455" stroke-width="2" stroke-linecap="round"/>
 </svg>

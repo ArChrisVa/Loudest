@@ -1,9 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-  <!-- The 24-pixel size: the lens and its three bars, nothing outside it.
-       Every part sits on whole pixels, so it stays sharp on the taskbar. -->
-  <rect width="24" height="24" rx="5.25" fill="#0a0b0d"/>
-  <rect x=".5" y=".5" width="23" height="23" rx="4.75" fill="none" stroke="#ecebe4" stroke-opacity=".18"/>
-  <circle cx="12" cy="12" r="7.5" fill="none" stroke="#ecebe4" stroke-width="3"/>
-  <path d="M8 11.5 V12.5 M16 11.5 V12.5" fill="none" stroke="#ecebe4" stroke-width="2" stroke-linecap="round"/>
-  <path d="M12 9 V15" fill="none" stroke="#e6b455" stroke-width="2" stroke-linecap="round"/>
+  <!-- The 24-pixel size, the one the taskbar shows: the same lens, with
+       every part on whole pixels so it stays sharp. The ring is 2 pixels. -->
+  <circle cx="12" cy="12" r="12" fill="#0a0b0d"/>
+  <circle cx="12" cy="12" r="11" fill="none" stroke="#ecebe4" stroke-width="2"/>
+  <path d="M7 11 V13 M17 11 V13" fill="none" stroke="#ecebe4" stroke-width="2" stroke-linecap="round"/>
+  <path d="M12 7 V17" fill="none" stroke="#e6b455" stroke-width="2" stroke-linecap="round"/>
 </svg>
