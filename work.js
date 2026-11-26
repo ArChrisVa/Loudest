@@ -221,6 +221,9 @@ function joinFound(found) {
 
 // ---------- The list ----------
 
+// The kinds, in the order "By kind" lists them: the editor's own first.
+const KIND_ORDER = ['Added', 'Laugh', 'Scream', 'Shout', 'Raised voice', 'Chat'];
+
 // The moments the list is showing, in the order it shows them.
 function visibleMoments() {
   const show = showSelect.value;
@@ -234,12 +237,32 @@ function visibleMoments() {
 
   if (sortSelect.value === 'time') {
     list.sort((a, b) => a.time - b.time);
+  } else if (sortSelect.value === 'kind') {
+    // Each kind together, and within a kind the strongest first. showMoments
+    // puts a heading over each group.
+    list.sort((a, b) => KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || b.strength - a.strength || a.time - b.time);
   } else {
     // The editor's own first, then the strongest first.
     const own = (moment) => (moment.kind === 'Added' ? 0 : 1);
     list.sort((a, b) => own(a) - own(b) || b.strength - a.strength || a.time - b.time);
   }
   return list;
+}
+
+// The rows of the list. Ordered by kind, every group gets a small heading
+// with its name and how many it holds.
+function buildRows(list) {
+  if (sortSelect.value !== 'kind') return list.map(buildMoment);
+  const rows = [];
+  for (const [n, moment] of list.entries()) {
+    if (moment.kind !== list[n - 1]?.kind) {
+      const count = list.filter((other) => other.kind === moment.kind).length;
+      const heading = part('li', 'group ' + styleOf(moment.kind), moment.kind === 'Added' ? 'Added by you' : moment.kind, part('span', '', String(count)));
+      rows.push(heading);
+    }
+    rows.push(buildMoment(moment));
+  }
+  return rows;
 }
 
 // Redraws the list, the strip's markers and the box for the selected moment.
@@ -253,7 +276,7 @@ function showMoments() {
   showFilter();
   // Pictures asked for by rows that are about to go are no longer wanted.
   picturesWanted = [];
-  momentList.replaceChildren(...list.map(buildMoment));
+  momentList.replaceChildren(...buildRows(list));
   timeline.setMoments(list, selected, (moment) => colourOf(moment.category), rangeOf);
 
   if (listenState === 'done') {
@@ -282,10 +305,10 @@ function part(tag, className, ...children) {
   return element;
 }
 
-// One row: a small picture of the moment, what it is called, a square in the
-// colour of why it was found, the time, and on the right whether it was kept
-// or rejected, a small square for every further reason, and a three-step
-// meter for how strong it is.
+// One row: a small picture of the moment, what it is called, the time and
+// why it was found, and on the right whether it was kept or rejected and a
+// three-step meter for how strong it is. The meter is the row's one spot of
+// colour, the colour of its kind; the amber tick aside.
 function buildMoment(moment) {
   const item = document.createElement('li');
   const button = document.createElement('button');
@@ -303,24 +326,22 @@ function buildMoment(moment) {
   picture.hidden = true;
   showPicture(picture, rangeOf(moment).start);
 
-  const label = part('span', 'label');
-  if (moment.category) label.append(dotFor(colourOf(moment.category)));
-  label.append(text);
-  const sub = part('span', 'sub', part('i', 'sq'), part('span', 'when', time));
-  // The kind is already what the row is called when it has no name of its own.
-  if (text !== moment.kind) sub.append(kindName);
+  const label = part('span', 'label', text);
+  // After the time: the kind, unless that is already what the row is called,
+  // and every further reason ("+ Chat").
+  const why = [...(text === moment.kind ? [] : [kindName]), ...moment.signs.slice(1).map((sign) => '+ ' + sign)];
+  const sub = part('span', 'sub', part('span', 'when', time), part('span', 'why', why.join(' ')));
 
   const mark = part('span', 'mark');
   if (moment.status) mark.append(iconOf(moment.status === 'kept' ? 'check-circle-fill' : 'x-circle'));
-  const more = part('span', 'signs', ...moment.signs.slice(1).map((sign) => part('i', styleOf(sign))));
-  const how = part('span', 'how', more);
+  const how = part('span', 'how');
   if (moment.kind !== 'Added') {
     const meter = part('span', 'meter', part('i', ''), part('i', ''), part('i', ''));
     meter.dataset.steps = moment.strength >= 0.67 ? 3 : moment.strength >= 0.34 ? 2 : 1;
     how.append(meter);
   }
 
-  // The squares, the tick and the fading are only visible; this says the same aloud.
+  // The meter, the tick and the fading are only visible; this says the same aloud.
   const aloud = [`${time} ${text}`];
   if (moment.signs.length > 1) aloud.push(moment.signs.join(' and '));
   if (moment.status) aloud.push(moment.status);
