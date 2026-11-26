@@ -101,7 +101,7 @@
             <dt><kbd>J</kbd><kbd>L</kbd></dt><dd>Back or forward 10 seconds</dd>
             <dt><kbd>↑</kbd><kbd>↓</kbd></dt><dd>Previous or next moment</dd>
             <dt><kbd>A</kbd></dt><dd>Keep the moment</dd>
-            <dt><kbd>X</kbd></dt><dd>Reject the moment</dd>
+            <dt><kbd>X</kbd><kbd>Del</kbd></dt><dd>Reject the moment, or remove one you added</dd>
             <dt><kbd>M</kbd></dt><dd>Add a moment here</dd>
             <dt><kbd>I</kbd><kbd>O</kbd></dt><dd>Set where the moment starts or ends</dd>
             <dt><kbd>F</kbd></dt><dd>Full screen</dd>
@@ -326,11 +326,13 @@
         <aside class="panel details">
           <div class="tabs details-tabs"><span aria-current="true">Moment</span></div>
           <p id="inspector-empty" class="dim">Pick a moment in the list or on the timeline.</p>
+          <!-- Shown in its place right after a moment of the editor's own was removed. -->
+          <p id="removed-line" role="status" hidden>Moment removed <button type="button" id="undo-remove" class="btn">Undo</button></p>
           <div id="inspector" class="inspector" hidden>
             <p class="found-by">Found by <span id="inspector-kind"></span></p>
             <div class="verdict">
               <button type="button" id="keep" title="Keep, and go to the next (A)" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Keep<kbd>A</kbd></button>
-              <button type="button" id="reject" title="Reject, and go to the next (X)" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg>Reject<kbd>X</kbd></button>
+              <button type="button" id="reject" title="Reject, and go to the next (X)" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg><span id="reject-label">Reject</span><kbd>X</kbd></button>
             </div>
             <label>Name<input type="text" id="moment-name" maxlength="200" autocomplete="off"></label>
             <label>Category<input type="text" id="moment-category" list="category-names" maxlength="60" autocomplete="off"></label>

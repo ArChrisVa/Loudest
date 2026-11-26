@@ -181,6 +181,8 @@ const KEYS = {
   KeyO: () => setEdge('end', player.currentTime),
   KeyA: () => decide('kept'),
   KeyX: () => decide('rejected'),
+  // The same as X: rejects a found moment, removes one the editor added.
+  Delete: () => decide('rejected'),
   KeyF: toggleFullScreen,
 };
 // Holding one of these down keeps going. The others act once per press.

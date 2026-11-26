@@ -27,6 +27,8 @@ const rangeLength = document.getElementById('range-length');
 const statusButtons = [...document.querySelectorAll('#show-status button')];
 const showOnly = document.getElementById('show-only');
 const inspectorEmpty = document.getElementById('inspector-empty');
+const removedLine = document.getElementById('removed-line');
+const rejectLabel = document.getElementById('reject-label');
 const timelineSelected = document.getElementById('timeline-selected');
 
 // Goes up every time a video is opened or closed, so an answer that arrives
@@ -52,6 +54,8 @@ let moments = [];
 
 // The moment the box under the list is about, or null.
 let selected = null;
+// The moment of the editor's own that was removed last, while "Undo" is on offer.
+let removed = null;
 
 // Every category in use, in any video: [{ name, colour }].
 let categories = [];
@@ -94,6 +98,7 @@ async function loadMoments(videoPath, atTime) {
 
   moments = [];
   selected = null;
+  removed = null;
   listenState = 'listening';
   saveProblem.textContent = '';
   analysisStatus.textContent = 'Listening to the whole video…';
@@ -492,14 +497,21 @@ function rangeOf(moment) {
 // Fills the box under the list with the selected moment, or hides it.
 function showSelected() {
   inspector.hidden = !selected;
-  inspectorEmpty.hidden = Boolean(selected);
+  // With nothing selected: the offer to undo a removal, or else the hint.
+  removedLine.hidden = Boolean(selected) || !removed;
+  inspectorEmpty.hidden = Boolean(selected) || Boolean(removed);
   timeline.setRange(selected ? rangeOf(selected) : null);
   timelineSelected.replaceChildren();
   if (!selected) return;
 
-  inspectorKind.textContent = selected.kind === 'Added' ? 'Added by you' : selected.signs.join(' + ');
+  // A moment the editor added can be removed; one the app found can only be
+  // rejected, because taken out it would just be found again.
+  const own = selected.kind === 'Added';
+  inspectorKind.textContent = own ? 'Added by you' : selected.signs.join(' + ');
   keepButton.setAttribute('aria-pressed', selected.status === 'kept');
   rejectButton.setAttribute('aria-pressed', selected.status === 'rejected');
+  rejectLabel.textContent = own ? 'Remove' : 'Reject';
+  rejectButton.title = own ? 'Remove this moment of yours (X or Delete)' : 'Reject, and go to the next (X or Delete)';
   // A box that is being typed in is left alone.
   if (document.activeElement !== nameInput) nameInput.value = selected.name;
   if (document.activeElement !== categoryInput) categoryInput.value = selected.category;
@@ -520,6 +532,8 @@ function showSelected() {
 
 function select(moment) {
   selected = moment;
+  // Going on to another moment ends the offer to undo a removal.
+  removed = null;
   showMoments();
   momentList.querySelector('[aria-current]')?.scrollIntoView({ block: 'nearest' });
 }
@@ -544,6 +558,11 @@ function stepMoment(direction) {
 // thing to a moment a second time takes the decision back, and stays.
 function decide(status) {
   if (!selected) return;
+  // Rejecting a moment of one's own would only leave it lying in the list.
+  if (status === 'rejected' && selected.kind === 'Added') {
+    removeSelected();
+    return;
+  }
   const list = visibleMoments();
   const next = list[list.indexOf(selected) + 1];
   const takingBack = selected.status === status;
@@ -552,6 +571,28 @@ function decide(status) {
   saveWork();
   if (!takingBack && next) jumpTo(next);
   else showMoments();
+}
+
+// Takes the selected moment, one the editor added, out of the video's
+// moments altogether. Its name, note and edges go with it, so it is held on
+// to and "Undo" is offered where its details were, until another moment is
+// selected or another video is opened.
+function removeSelected() {
+  removed = selected;
+  moments = moments.filter((moment) => moment !== removed);
+  selected = null;
+  saveWork();
+  showMoments();
+}
+
+function undoRemove() {
+  if (!removed) return;
+  const back = removed;
+  moments.push(back);
+  // A choice such as "Rejected" would hide it, and it would seem nothing happened.
+  if (!visibleMoments().includes(back)) showSelect.value = 'all';
+  saveWork();
+  select(back);
 }
 
 // A moment of the editor's own, where the video is now. It starts out kept:
@@ -656,6 +697,7 @@ for (const [box, field] of [[nameInput, 'name'], [categoryInput, 'category'], [n
 
 keepButton.addEventListener('click', () => decide('kept'));
 rejectButton.addEventListener('click', () => decide('rejected'));
+document.getElementById('undo-remove').addEventListener('click', undoRemove);
 startButton.addEventListener('click', () => setEdge('start', player.currentTime));
 endButton.addEventListener('click', () => setEdge('end', player.currentTime));
 

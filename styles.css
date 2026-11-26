@@ -482,6 +482,8 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 /* right */
 .details { display: grid; grid-template-rows: auto 1fr; }
 #inspector-empty { padding: 14px 12px; font-size: 12px; }
+#removed-line { padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; align-self: start; color: var(--dim); font-size: 12px; }
+#removed-line .btn { height: 26px; color: var(--text); }
 .inspector { padding: 12px; display: grid; gap: 14px; align-content: start; overflow-y: auto; min-height: 0; }
 .found-by { color: var(--dim); font-size: 12px; }
 #inspector-kind { color: var(--text); margin-left: 4px; }
