@@ -810,8 +810,15 @@ ipcMain.handle('app:github', (event, version) => {
 // File / Edit / View menu that Electron adds by itself is switched off.
 Menu.setApplicationMenu(null);
 
+// The tests start the app with --test-window (tests\drive.js) while someone
+// is using the PC. The window then opens off the edge of the screen, without
+// taking the keyboard and without a button on the taskbar, so a test is
+// never in anybody's face. Nothing else about the app changes.
+const quietWindow = app.commandLine.hasSwitch('test-window');
+
 function createWindow() {
   const win = new BrowserWindow({
+    ...(quietWindow ? { show: false, x: -20000, y: -20000, skipTaskbar: true } : {}),
     // Wide enough for everything under the picture, the volume slider at
     // its full length included.
     width: 1280,
@@ -842,6 +849,8 @@ function createWindow() {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
   win.loadFile('index.html');
+  // Shown, so that the page draws as usual, but not brought to the front.
+  if (quietWindow) win.showInactive();
 }
 
 // The name Windows knows the app by. It is the same as the installer's, so
