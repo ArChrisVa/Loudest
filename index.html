@@ -126,13 +126,16 @@
 
     <!-- The card that says what is new after an update (whats-new.js). A
          <dialog> is the page's own pop-up window: it keeps the keyboard
-         inside it, and closes on Escape or on a click beside it. -->
-    <dialog id="whats-new" aria-labelledby="whats-new-title" closedby="any">
+         inside it, and closes on Escape or on a click beside it. tabindex lets
+         whats-new.js put the keyboard on the card as a whole when it opens,
+         not on one of its buttons, so no button is ringed at first sight;
+         Enter then means "Got it". -->
+    <dialog id="whats-new" aria-labelledby="whats-new-title" closedby="any" tabindex="-1">
       <h2 id="whats-new-title"></h2>
       <div id="whats-new-list"></div>
       <div class="dialog-actions">
         <button type="button" id="whats-new-all" class="btn">All changes</button>
-        <button type="button" id="whats-new-ok" class="primary" autofocus>Got it</button>
+        <button type="button" id="whats-new-ok" class="primary">Got it</button>
       </div>
     </dialog>
 

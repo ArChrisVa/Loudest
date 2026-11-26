@@ -76,14 +76,20 @@ function showWhatsNew(notes) {
     return section;
   }));
   whatsNew.showModal();
+  // The keyboard goes to the card as a whole, not to its first button.
+  whatsNew.focus();
 }
 
 document.getElementById('whats-new-ok').addEventListener('click', () => whatsNew.close());
 // Every change of that version, on its page on GitHub.
 document.getElementById('whats-new-all').addEventListener('click', () => window.loudest.openGitHub(whatsNew.dataset.version));
 // While the card is open the keys belong to it: without this, A would keep a
-// moment behind it (player.js).
-whatsNew.addEventListener('keydown', (event) => event.stopPropagation());
+// moment behind it (player.js). Enter on the card itself, where the keyboard
+// is when it opens, means "Got it"; on a button, Enter presses that button.
+whatsNew.addEventListener('keydown', (event) => {
+  event.stopPropagation();
+  if (event.code === 'Enter' && event.target === whatsNew) whatsNew.close();
+});
 
 // At the start: has this copy been updated since it last ran? Only the
 // installed app asks (`announce`, from main.js). A first install has nothing

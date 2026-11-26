@@ -79,7 +79,11 @@ button {
 button:active:not(:disabled) { transform: translateY(1px); }
 button:disabled { cursor: default; opacity: .45; }
 
-:focus-visible { outline: 2px solid var(--accent-hi); outline-offset: 2px; }
+/* Where the keyboard is. A button reached with Tab gets a thin bone ring; the
+   mouse never shows it. (A box that is being typed in shows it differently,
+   further down: its own edge turns brighter.) Something has to mark the
+   spot, or the app cannot be used without a mouse. */
+:focus-visible { outline: 1.5px solid #ecebe499; outline-offset: 2px; }
 
 /* Scroll bars everywhere: a thin rounded line, with no arrows and no gutter
    of its own colour. The see-through border is what makes it thin. */
@@ -210,11 +214,12 @@ input[type="text"], input[type="search"], input[type="number"], textarea, .field
   background: var(--base);
   box-shadow: 0 0 0 1px var(--line) inset;
   padding: 0 9px;
-  outline-offset: 0;
   transition: box-shadow .15s;
   user-select: text;
 }
 input:hover, textarea:hover, .field:hover, select:hover { box-shadow: 0 0 0 1px var(--line-strong) inset; }
+/* The box the keyboard is in: no ring around it, its own thin edge turns bone. */
+input[type="text"]:focus-visible, input[type="search"]:focus-visible, input[type="number"]:focus-visible, textarea:focus-visible, .field:focus-visible, select:focus-visible { outline: 0; box-shadow: 0 0 0 1px #ecebe473 inset; }
 input::placeholder, textarea::placeholder { color: var(--faint); }
 textarea { height: auto; padding: 7px 9px; resize: none; display: block; width: 100%; line-height: 1.4; }
 
@@ -311,6 +316,8 @@ dialog {
   -webkit-app-region: no-drag;
 }
 dialog::backdrop { background: #050506b3; }
+/* The card as a whole holds the keyboard when it opens; it needs no ring for that. */
+dialog:focus-visible { outline: 0; }
 dialog h2 { margin: 0 0 18px; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
 dialog h3 { margin: 16px 0 10px; font-size: 12px; font-weight: 600; color: var(--dim); }
 dialog ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
