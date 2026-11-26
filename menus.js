@@ -22,6 +22,8 @@ const MENU_DOES = {
   home: showHome,
   exit: () => window.close(),
   shortcuts: () => shortcutsBox.showPopover(),
+  // The newest notes there are (whats-new.js).
+  whatsnew: () => showWhatsNew(RELEASE_NOTES.slice(0, 1)),
   github: () => window.loudest.openGitHub(),
   check: async () => {
     showUpdate(await window.loudest.checkForUpdate());

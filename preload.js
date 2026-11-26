@@ -18,7 +18,8 @@ contextBridge.exposeInMainWorld('loudest', {
   saveRecent: ask('recent:save'),
   removeRecent: ask('recent:remove'),
 
-  // The editor's choices: { sensitivity, leadIn }.
+  // The editor's choices, and the version that last ran here:
+  // { sensitivity, leadIn, language, seenVersion }.
   getSettings: ask('settings:get'),
   setSettings: ask('settings:set'),
 
@@ -64,7 +65,7 @@ contextBridge.exposeInMainWorld('loudest', {
   onClipsProgress: hear('clips:progress'), // { done, total }
   copyText: ask('clipboard:write'),
 
-  // Loudest's page, in the browser.
+  // Loudest's page, in the browser; with a version like '1.1.0', that release's page.
   openGitHub: ask('app:github'),
 
   // Newer versions. A status is { state, version, available, percent,

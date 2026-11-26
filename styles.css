@@ -290,6 +290,31 @@ progress:indeterminate { background: linear-gradient(90deg, var(--hover) 0 40%, 
 .key-list dt { display: flex; gap: 4px; }
 .key-list dd { margin: 0; color: var(--dim); }
 
+/* The card in the middle of the window that says what is new. */
+dialog {
+  width: min(500px, 92vw);
+  max-height: 76vh;
+  padding: 22px;
+  border: 0;
+  border-radius: var(--r-panel);
+  background: var(--raised);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--line-strong), 0 24px 60px -12px #000;
+  overflow-y: auto;
+  -webkit-app-region: no-drag;
+}
+dialog::backdrop { background: #050506b3; }
+dialog h2 { margin: 0 0 18px; font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+dialog h3 { margin: 16px 0 10px; font-size: 12px; font-weight: 600; color: var(--dim); }
+dialog ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+dialog li { display: flex; align-items: flex-start; gap: 12px; }
+.whats-new-icon { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: var(--r-control); background: #ffffff0d; box-shadow: 0 0 0 1px var(--line) inset, 0 1px 0 #ffffff14 inset; color: var(--accent-hi); }
+.whats-new-text { display: grid; gap: 3px; }
+.whats-new-text b { font-weight: 500; }
+.whats-new-text span { color: var(--dim); font-size: 12.5px; line-height: 1.45; text-wrap: pretty; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+.dialog-actions .primary { padding: 0 14px; }
+
 /* ---------- Home ---------- */
 
 .home-panel { padding: 20px 24px; overflow-y: auto; }

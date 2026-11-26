@@ -83,6 +83,7 @@
         <button type="button" id="help-button" popovertarget="help-menu" aria-haspopup="menu">Help</button>
         <div id="help-menu" class="box menu" role="menu" popover>
           <button type="button" role="menuitem" data-do="shortcuts">Keyboard shortcuts</button>
+          <button type="button" role="menuitem" data-do="whatsnew">What's new</button>
           <button type="button" role="menuitem" data-do="github">Loudest on GitHub</button>
           <hr>
           <!-- data-stay: the menu stays open, because the answer appears in the line under it. -->
@@ -122,6 +123,18 @@
         <button type="button" id="export-button" class="primary only-work" popovertarget="export-box"><svg class="icon" aria-hidden="true"><use href="#i-export"/></svg>Export</button>
       </div>
     </header>
+
+    <!-- The card that says what is new after an update (whats-new.js). A
+         <dialog> is the page's own pop-up window: it keeps the keyboard
+         inside it, and closes on Escape or on a click beside it. -->
+    <dialog id="whats-new" aria-labelledby="whats-new-title" closedby="any">
+      <h2 id="whats-new-title"></h2>
+      <div id="whats-new-list"></div>
+      <div class="dialog-actions">
+        <button type="button" id="whats-new-all" class="btn">All changes</button>
+        <button type="button" id="whats-new-ok" class="primary" autofocus>Got it</button>
+      </div>
+    </dialog>
 
     <main id="home" class="screen">
       <section class="panel home-panel">
@@ -394,6 +407,7 @@
     <script src="player.js"></script>
     <script src="work.js"></script>
     <script src="extras.js"></script>
+    <script src="whats-new.js"></script>
     <script src="menus.js"></script>
   </body>
 </html>

@@ -184,14 +184,17 @@ function readSettings() {
     language: LANGUAGES.includes(saved?.language)
       ? saved.language
       : app.getPreferredSystemLanguages().some((language) => language.startsWith('el')) ? 'el' : 'auto',
+    // The version of Loudest that last ran here, so that after an update
+    // the window can say what is new. null until one has been noted.
+    seenVersion: typeof saved?.seenVersion === 'string' && /^\d+\.\d+\.\d+$/.test(saved.seenVersion) ? saved.seenVersion : null,
   };
 }
 
 ipcMain.handle('settings:get', () => readSettings());
 
 ipcMain.handle('settings:set', (event, changes) => {
-  const { sensitivity, leadIn, language } = { ...readSettings(), ...changes };
-  writeJson(settingsFile, { sensitivity, leadIn, language });
+  const { sensitivity, leadIn, language, seenVersion } = { ...readSettings(), ...changes };
+  writeJson(settingsFile, { sensitivity, leadIn, language, seenVersion });
   // Read back, so that anything out of range comes back corrected.
   return readSettings();
 });
@@ -711,7 +714,9 @@ ipcMain.handle('clipboard:write', (event, text) => {
 //
 // `state` is one of: 'off' (this copy does not update itself), 'idle',
 // 'checking', 'none' (nothing newer), 'downloading', 'ready', 'error'.
-let update = { state: 'off', version: app.getVersion() };
+// `announce` tells the window to show what is new after an update
+// (whats-new.js); like updating, that is for the installed app only.
+let update = { state: 'off', version: app.getVersion(), announce: false };
 let updater = null;
 
 function setUpdate(changes) {
@@ -750,6 +755,7 @@ function startUpdates() {
   // install anything on this PC.
   if (!app.isPackaged || app.commandLine.hasSwitch('user-data-dir')) return;
 
+  update.announce = true;
   updater = require('electron-updater').autoUpdater;
   updater.autoDownload = true;
   updater.autoInstallOnAppQuit = true;
@@ -785,9 +791,14 @@ ipcMain.handle('update:install', () => {
 
 // ---------- The Help menu ----------
 
-// Opens Loudest's page in the browser. The address is written here and not
-// sent by the window, so nothing in the window can open any other address.
-ipcMain.handle('app:github', () => shell.openExternal('https://github.com/ArChrisVa/Loudest'));
+// Opens Loudest's page in the browser, or with a version, the page of that
+// release. The address is written here, and from the window only a plain
+// version number is taken, so nothing in the window can open any other address.
+ipcMain.handle('app:github', (event, version) => {
+  const page = 'https://github.com/ArChrisVa/Loudest';
+  const release = typeof version === 'string' && /^\d+\.\d+\.\d+$/.test(version);
+  return shell.openExternal(release ? `${page}/releases/tag/v${version}` : page);
+});
 
 // ---------- The window ----------
 
