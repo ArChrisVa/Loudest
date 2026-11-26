@@ -524,10 +524,13 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 #message { position: absolute; inset: 0 0 50px 0; display: grid; place-content: center; padding: 20px; text-align: center; z-index: 1; pointer-events: none; }
 #message:empty { display: none; }
 
-/* The two sides are always equally wide, which keeps the play button in the
-   middle under the picture whatever stands on either side. When the window is
-   narrow the volume slider gives way first: it shrinks. */
-.transport { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; padding: 0 12px; }
+/* The two sides are equally wide, which keeps the play button in the middle
+   under the picture whatever stands on either side. When the window is
+   narrow the volume slider gives way first: it shrinks. Once it is gone the
+   right side stays as wide as what is left on it (min-content) and takes the
+   room from the clock's side, so the play button moves a little to the left
+   before any button is pushed onto another. */
+.transport { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(min-content, 1fr); align-items: center; padding: 0 12px; }
 .clock { display: flex; align-items: baseline; gap: 8px; min-width: 0; overflow: hidden; white-space: nowrap; }
 .timecode { font: 400 12px var(--mono); letter-spacing: -0.02em; color: var(--faint); }
 .timecode.now { font-size: 14px; font-weight: 500; color: var(--text); }
@@ -549,7 +552,9 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 #skip-step { width: calc(3ch + 21px); }
 #speed { width: calc(5ch + 21px); }
 #speed:hover, #skip-step:hover { background-color: var(--raised); }
-#volume { flex: 0 1 70px; width: 70px; min-width: 0; margin: 0 4px; }
+/* The slider asks for no room of its own and grows into what is free, up to
+   70 pixels. That is what lets the right side above count without it. */
+#volume { flex: 1 1 0; width: 0; max-width: 70px; min-width: 0; margin: 0 4px; }
 
 /* right */
 .details { display: grid; grid-template-rows: auto 1fr; }
