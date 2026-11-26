@@ -7,6 +7,36 @@
 // the top of index.html.
 const RELEASE_NOTES = [
   {
+    version: '2.1.0',
+    highlights: [
+      {
+        icon: 'check-circle',
+        title: 'Undo, and decisions that stay put',
+        body: 'Ctrl+Z takes back your last change and Ctrl+Shift+Z redoes it. A and X no longer flip a decision when pressed twice; U takes one back.',
+      },
+      {
+        icon: 'arrow-line-left',
+        title: 'Type where a moment starts and ends',
+        body: 'Start and End are boxes you can type a time into, or move a second with the up and down keys. Selecting a moment zooms the timeline to it; Shift+Z shows the whole video again.',
+      },
+      {
+        icon: 'waveform',
+        title: 'See what is left',
+        body: 'All, To review, Kept and Rejected show their counts and work together with the kind menu and a new search box. A video you come back to opens on what is still to review.',
+      },
+      {
+        icon: 'export',
+        title: 'Export only what you kept',
+        body: 'Export asks whether to send the kept moments or everything not rejected, and no longer sends everything when nothing is kept. What it did stays in the box, with Show in folder.',
+      },
+      {
+        icon: 'skip-forward',
+        title: 'Keys from your editing program',
+        body: 'L plays faster, K stops, J slows down. Comma and full stop step one frame. Enter names a moment, a right-click opens its menu, and Ctrl or Shift with a click picks several.',
+      },
+    ],
+  },
+  {
     version: '2.0.0',
     highlights: [
       {

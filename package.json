@@ -1,6 +1,6 @@
 {
   "name": "loudest",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Finds the moments worth editing in a long stream VOD.",
   "author": "Loudest",
