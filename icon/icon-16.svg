@@ -1,8 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-  <!-- The 16-pixel size: one bar each side, the glass, the lit bar. -->
-  <rect width="16" height="16" rx="3.5" fill="#8b5cf6"/>
-  <path d="M1.6 6.3 V8.7 M14.4 6.3 V8.7" fill="none" stroke="#d9ccff" stroke-width="1.2" stroke-linecap="round"/>
-  <path d="M10.8 10.2 L13.6 13" fill="none" stroke="#1a1a2e" stroke-width="2.4" stroke-linecap="round"/>
-  <circle cx="8" cy="7.5" r="3.8" fill="#1a1a2e" stroke="#f1ecff" stroke-width="1.5"/>
-  <path d="M8 5.6 V9.4" fill="none" stroke="#f1ecff" stroke-width="1.7" stroke-linecap="round"/>
+  <!-- The 16-pixel size: the lens, the loud bar two pixels wide, and a dot
+       either side of it. Every part sits on whole pixels. -->
+  <rect width="16" height="16" rx="3.5" fill="#0a0b0d"/>
+  <rect x=".5" y=".5" width="15" height="15" rx="3" fill="none" stroke="#ecebe4" stroke-opacity=".18"/>
+  <circle cx="8" cy="8" r="5" fill="none" stroke="#ecebe4" stroke-width="2"/>
+  <path d="M5.5 7.5 V8.5 M10.5 7.5 V8.5" fill="none" stroke="#ecebe4" stroke-width="1" stroke-linecap="round"/>
+  <path d="M8 6.5 V9.5" fill="none" stroke="#e6b455" stroke-width="2" stroke-linecap="round"/>
 </svg>
