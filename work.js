@@ -19,7 +19,6 @@ const keepButton = document.getElementById('keep');
 const rejectButton = document.getElementById('reject');
 const nameInput = document.getElementById('moment-name');
 const categoryInput = document.getElementById('moment-category');
-const categoryDot = document.getElementById('category-dot');
 const categoryNames = document.getElementById('category-names');
 const noteInput = document.getElementById('moment-note');
 const startButton = document.getElementById('set-start');
@@ -505,7 +504,6 @@ function showSelected() {
   if (document.activeElement !== nameInput) nameInput.value = selected.name;
   if (document.activeElement !== categoryInput) categoryInput.value = selected.category;
   if (document.activeElement !== noteInput) noteInput.value = selected.note;
-  categoryDot.style.background = colourOf(selected.category) || 'transparent';
 
   const range = rangeOf(selected);
   startButton.textContent = formatDuration(range.start);
