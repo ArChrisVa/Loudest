@@ -53,7 +53,7 @@
       <!-- The menus. An item with data-press presses the button of that id,
            so each action keeps one piece of code; the few with data-do have
            no button and are done by menus.js. data-key is the key that goes
-           with Ctrl. -->
+           with Ctrl (or the keys, with a space between them). -->
       <nav class="menubar" aria-label="Menus">
         <button type="button" id="file-button" popovertarget="file-menu" aria-haspopup="menu">File</button>
         <div id="file-menu" class="box menu" role="menu" popover>
@@ -76,6 +76,13 @@
           <hr class="only-work">
           <button type="button" role="menuitem" class="only-work" data-press="zoom-in">Zoom in on the timeline</button>
           <button type="button" role="menuitem" class="only-work" data-press="zoom-out">Zoom out</button>
+          <hr>
+          <!-- Everything in the window grows with the text (menus.js, main.js).
+               Two keys each: the one in the row of numbers and the one on the
+               number pad. -->
+          <button type="button" role="menuitem" data-do="bigger" data-key="Equal NumpadAdd">Bigger text<span class="keys">Ctrl +</span></button>
+          <button type="button" role="menuitem" data-do="smaller" data-key="Minus NumpadSubtract">Smaller text<span class="keys">Ctrl −</span></button>
+          <button type="button" role="menuitem" data-do="normal" data-key="Digit0 Numpad0">Normal size<span class="keys">Ctrl 0</span></button>
           <hr class="only-work">
           <button type="button" role="menuitem" class="only-work" data-press="fullscreen">Full screen<span class="keys">F</span></button>
         </div>
@@ -105,6 +112,7 @@
             <dt><kbd>M</kbd></dt><dd>Add a moment here</dd>
             <dt><kbd>I</kbd><kbd>O</kbd></dt><dd>Set where the moment starts or ends</dd>
             <dt><kbd>F</kbd></dt><dd>Full screen</dd>
+            <dt><kbd>Ctrl</kbd><kbd>+</kbd><kbd>−</kbd><kbd>0</kbd></dt><dd>Bigger text, smaller, or the normal size</dd>
           </dl>
         </div>
       </nav>

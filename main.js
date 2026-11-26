@@ -2,7 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, Notification, shell, utilityProcess } = require('electron');
+const { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, Notification, screen, shell, utilityProcess } = require('electron');
 const { findMoments, findQuiet, probeVideo } = require('./analysis');
 const { readChatFile, findChatSpikes, chatDensity } = require('./chat');
 const { downloadChat, cancelDownload } = require('./chat-download');
@@ -57,6 +57,9 @@ const STATUSES = ['', 'kept', 'rejected'];
 const LANGUAGES = ['el', 'en', 'auto'];
 // The jumps the menu beside the speed offers, in seconds (index.html).
 const SKIP_CHOICES = [1, 5, 10, 30];
+// How big everything in the window can be drawn: 1 is the normal size, and
+// View, Bigger text goes up from there one step at a time.
+const SIZES = [1, 1.1, 1.2, 1.3, 1.4, 1.5];
 
 function readJson(file, fallback) {
   try {
@@ -188,6 +191,8 @@ function readSettings() {
       : app.getPreferredSystemLanguages().some((language) => language.startsWith('el')) ? 'el' : 'auto',
     // How many seconds the two skip buttons under the picture jump.
     skip: SKIP_CHOICES.includes(saved?.skip) ? saved.skip : 5,
+    // How big everything is drawn, one of SIZES.
+    size: SIZES.includes(saved?.size) ? saved.size : 1,
     // The version of Loudest that last ran here, so that after an update
     // the window can say what is new. null until one has been noted.
     seenVersion: typeof saved?.seenVersion === 'string' && /^\d+\.\d+\.\d+$/.test(saved.seenVersion) ? saved.seenVersion : null,
@@ -197,8 +202,10 @@ function readSettings() {
 ipcMain.handle('settings:get', () => readSettings());
 
 ipcMain.handle('settings:set', (event, changes) => {
+  // The size is not among these: it changes through 'size:change' below,
+  // which changes the window with it.
   const { sensitivity, leadIn, language, skip, seenVersion } = { ...readSettings(), ...changes };
-  writeJson(settingsFile, { sensitivity, leadIn, language, skip, seenVersion });
+  writeJson(settingsFile, { sensitivity, leadIn, language, skip, seenVersion, size: readSettings().size });
   // Read back, so that anything out of range comes back corrected.
   return readSettings();
 });
@@ -816,18 +823,82 @@ Menu.setApplicationMenu(null);
 // never in anybody's face. Nothing else about the app changes.
 const quietWindow = app.commandLine.hasSwitch('test-window');
 
+// What the window needs at the normal size: how big it opens, the least it
+// can be, and how tall the top bar is. Below the least width the buttons
+// under the picture no longer fit between the two side panels. (From there
+// up to about 1330 the volume slider is shorter; it is the one thing that
+// gives way.) At a bigger size the window needs that many times more,
+// because everything in it is drawn that much bigger.
+const WINDOW_OPENS = { width: 1280, height: 760 };
+const WINDOW_LEAST = { width: 1140, height: 560 };
+const BAR_HEIGHT = 40;
+
+// How big everything is drawn now, one of SIZES.
+let sizeNow = 1;
+
+// The sizes a screen has room for, given the part of it that windows may
+// use ({ width, height }). The normal size always counts.
+function sizesThatFit(area) {
+  return SIZES.filter((size) => size === 1 || (WINDOW_LEAST.width * size <= area.width && WINDOW_LEAST.height * size <= area.height));
+}
+
+// Where the size stands, for the View menu: the size, and whether it can go
+// either way from here on the screen the window is on.
+function sizeStatus(win) {
+  const fits = sizesThatFit(screen.getDisplayMatching(win.getBounds()).workAreaSize);
+  return { size: sizeNow, bigger: fits.includes(SIZES[SIZES.indexOf(sizeNow) + 1]), smaller: sizeNow > 1 };
+}
+
+// Draws everything in the window at `size`. The window keeps showing as much
+// as it did: it grows or shrinks by the same amount, as far as the screen
+// allows, and so does the least it can be. A maximised window stays as it is.
+function changeSize(win, size) {
+  const before = sizeNow;
+  sizeNow = size;
+  win.webContents.setZoomFactor(size);
+  win.setMinimumSize(Math.round(WINDOW_LEAST.width * size), Math.round(WINDOW_LEAST.height * size));
+  // Minimise, maximise and close stay as tall as the bar they sit on.
+  win.setTitleBarOverlay({ height: Math.round(BAR_HEIGHT * size) });
+  if (win.isMaximized() || win.isFullScreen()) return;
+
+  const bounds = win.getBounds();
+  const area = screen.getDisplayMatching(bounds).workArea;
+  const width = Math.min(area.width, Math.round((bounds.width * size) / before));
+  const height = Math.min(area.height, Math.round((bounds.height * size) / before));
+  // A window that has grown past the edge of the screen moves back onto it.
+  // (The tests' window is off the screen on purpose, and stays there.)
+  const x = quietWindow ? bounds.x : Math.max(area.x, Math.min(bounds.x, area.x + area.width - width));
+  const y = quietWindow ? bounds.y : Math.max(area.y, Math.min(bounds.y, area.y + area.height - height));
+  win.setBounds({ x, y, width, height });
+}
+
+// From View, Bigger text and its two neighbours: `way` is 'bigger',
+// 'smaller' or 'normal'. Anything else changes nothing, which is how the
+// window asks where the size stands. Answers { size, bigger, smaller }.
+ipcMain.handle('size:change', (event, way) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const steps = { bigger: 1, smaller: -1 };
+  const wanted = way === 'normal' ? 1 : SIZES[SIZES.indexOf(sizeNow) + (steps[way] ?? 0)];
+  const fits = sizesThatFit(screen.getDisplayMatching(win.getBounds()).workAreaSize);
+  if (wanted !== undefined && wanted !== sizeNow && fits.includes(wanted)) {
+    changeSize(win, wanted);
+    writeJson(settingsFile, { ...readSettings(), size: wanted });
+  }
+  return sizeStatus(win);
+});
+
 function createWindow() {
+  // The size chosen last time, or the biggest one below it that this screen
+  // has room for.
+  const area = screen.getPrimaryDisplay().workAreaSize;
+  sizeNow = sizesThatFit(area).filter((size) => size <= readSettings().size).at(-1);
+
   const win = new BrowserWindow({
     ...(quietWindow ? { show: false, x: -20000, y: -20000, skipTaskbar: true } : {}),
-    // Wide enough for everything under the picture, the volume slider at
-    // its full length included.
-    width: 1280,
-    height: 760,
-    // Below this the buttons under the picture no longer fit between the
-    // two side panels. (From here up to about 1250 the volume slider is
-    // shorter; it is the one thing there that gives way.)
-    minWidth: 1140,
-    minHeight: 560,
+    width: Math.min(area.width, Math.round(WINDOW_OPENS.width * sizeNow)),
+    height: Math.min(area.height, Math.round(WINDOW_OPENS.height * sizeNow)),
+    minWidth: Math.round(WINDOW_LEAST.width * sizeNow),
+    minHeight: Math.round(WINDOW_LEAST.height * sizeNow),
     // Shown in the taskbar. Built from __dirname so it is found no matter
     // which folder the app is started from.
     icon: path.join(__dirname, 'icon.ico'),
@@ -838,8 +909,8 @@ function createWindow() {
     // still draws minimise, maximise and close itself, over the right end of
     // that bar, in these colours and at the bar's height.
     titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#0a0b0d', symbolColor: '#ecebe4', height: 40 },
-    webPreferences: { preload: path.join(__dirname, 'preload.js') },
+    titleBarOverlay: { color: '#0a0b0d', symbolColor: '#ecebe4', height: Math.round(BAR_HEIGHT * sizeNow) },
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), zoomFactor: sizeNow },
   });
 
   // Without this, dropping a file anywhere on the window makes Electron

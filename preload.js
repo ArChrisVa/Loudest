@@ -19,7 +19,7 @@ contextBridge.exposeInMainWorld('loudest', {
   removeRecent: ask('recent:remove'),
 
   // The editor's choices, and the version that last ran here:
-  // { sensitivity, leadIn, language, skip, seenVersion }.
+  // { sensitivity, leadIn, language, skip, seenVersion, size }.
   getSettings: ask('settings:get'),
   setSettings: ask('settings:set'),
 
@@ -64,6 +64,11 @@ contextBridge.exposeInMainWorld('loudest', {
   exportClips: ask('export:clips'),
   onClipsProgress: hear('clips:progress'), // { done, total }
   copyText: ask('clipboard:write'),
+
+  // How big everything in the window is drawn. With 'bigger', 'smaller' or
+  // 'normal' it changes; with nothing it only answers. Either way it answers
+  // { size, bigger, smaller }: the size, and whether it can go each way.
+  changeSize: ask('size:change'),
 
   // Loudest's page, in the browser; with a version like '1.1.0', that release's page.
   openGitHub: ask('app:github'),

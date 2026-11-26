@@ -17,8 +17,20 @@ const updateButton = document.getElementById('update-button');
 // available, percent, problem }. main.js explains the states.
 let update = { state: 'off', version: '' };
 
+// How big everything in the window is drawn, and whether it can go either
+// way from here: { size, bigger, smaller }. main.js keeps it and changes the
+// window with it; asked with nothing, it only answers.
+let size = { size: 1, bigger: true, smaller: false };
+async function resize(way) {
+  size = await window.loudest.changeSize(way);
+}
+resize();
+
 // What the items without a button of their own do.
 const MENU_DOES = {
+  bigger: () => resize('bigger'),
+  smaller: () => resize('smaller'),
+  normal: () => resize('normal'),
   home: showHome,
   exit: () => window.close(),
   shortcuts: () => shortcutsBox.showPopover(),
@@ -42,6 +54,9 @@ function canDo(item) {
   const button = buttonOf(item);
   if (button && (button.hidden || button.disabled)) return false;
   if (item.dataset.do === 'check' && ['checking', 'downloading'].includes(update.state)) return false;
+  // No bigger than the screen has room for, and no smaller than normal.
+  if (item.dataset.do === 'bigger' && !size.bigger) return false;
+  if (['smaller', 'normal'].includes(item.dataset.do) && !size.smaller) return false;
   return !('needsVideo' in item.dataset && work.hidden);
 }
 
@@ -129,7 +144,10 @@ for (const button of menuButtons) {
 const MENU_KEYS = { KeyF: 'file-menu', KeyV: 'view-menu', KeyH: 'help-menu' };
 
 window.addEventListener('keydown', (event) => {
-  if (event.repeat || event.shiftKey || event.metaKey) return;
+  if (event.repeat || event.metaKey) return;
+  // Shift is let through on one key only: the plus sign is Shift and = on
+  // most keyboards, and Ctrl with either means "bigger".
+  if (event.shiftKey && event.code !== 'Equal') return;
   // AltGr counts as Ctrl and Alt together, and means neither.
   if (event.ctrlKey === event.altKey) return;
 
@@ -141,7 +159,8 @@ window.addEventListener('keydown', (event) => {
     return;
   }
 
-  const item = document.querySelector(`.menubar [data-key="${event.code}"]`);
+  // "~=": an item may name several keys, with spaces between them.
+  const item = document.querySelector(`.menubar [data-key~="${event.code}"]`);
   if (!item) return;
   event.preventDefault();
   if (canDo(item)) doItem(item);

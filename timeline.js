@@ -148,7 +148,7 @@ const timeline = (() => {
       pen.fillStyle = labelled ? '#ffffff38' : '#ffffff1f';
       pen.fillRect(x, labelled ? height - 12 : height - 5, 1, labelled ? 12 : 5);
       if (labelled) {
-        pen.fillStyle = '#5f616b';
+        pen.fillStyle = '#80828d'; // --faint in styles.css
         // Rounded, because 15 × 0.2 is not exactly 3 to a computer.
         pen.fillText(formatDuration(Math.round(n * small)), x + 5, 2);
       }
