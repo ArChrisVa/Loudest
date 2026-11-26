@@ -224,7 +224,10 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
 textarea { height: auto; padding: 7px 9px; resize: none; display: block; width: 100%; line-height: 1.4; }
 
 select {
-  appearance: none;
+  /* base-select hands the drawing of the menu and of its list from Windows
+     to these styles (see "The lists that drop down" below). */
+  appearance: base-select;
+  align-items: center;
   padding-right: 24px;
   color: var(--dim);
   font-weight: 500;
@@ -235,7 +238,55 @@ select {
   background-size: 9px;
 }
 select:hover { color: var(--text); }
-option, optgroup { background: var(--raised); color: var(--text); }
+
+/* The lists that drop down from the menus. Windows used to draw them (a grey
+   box with a light blue bar). With base-select on the menu and on its list,
+   "::picker(select)", the page draws them itself, so they look like File,
+   View and Help: a dark rounded box, the row under the mouse lit, and an
+   amber tick on the one that is chosen. They are still real menus: the
+   arrow keys, typing a first letter and screen readers work as before. */
+select::picker-icon { display: none; }
+::picker(select) {
+  appearance: base-select;
+  min-width: 110px;
+  margin: 5px 0;
+  padding: 6px;
+  border: 0;
+  border-radius: var(--r-panel);
+  background: var(--raised);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--line-strong), 0 16px 40px -8px #000c;
+  font: 400 13px/1.4 Geist, "Segoe UI Variable Text", "Segoe UI", sans-serif;
+}
+option {
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: var(--r-small);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  background: none;
+  color: var(--text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* The row under the mouse, or the one the arrow keys are on, is lit; it needs no ring as well. */
+option:hover, option:focus-visible { background: var(--hover); outline: 0; }
+/* The tick, drawn from the same shape as the icon "check" at the top of index.html. */
+option::checkmark {
+  content: "";
+  order: 1;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  background: var(--accent-hi);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+option:not(:checked)::checkmark { visibility: hidden; }
+/* The two small menus under the picture keep what they show against their
+   arrow, on the right (a menu drawn this way lays its text out from the left). */
+#speed, #skip-step { justify-content: flex-end; }
 
 input[type="range"] { appearance: none; height: 14px; background: none; padding: 0; box-shadow: none; cursor: pointer; }
 input[type="range"]::-webkit-slider-runnable-track { height: 3px; border-radius: 3px; background: var(--hover); }

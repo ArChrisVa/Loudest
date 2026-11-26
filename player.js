@@ -194,7 +194,8 @@ window.addEventListener('keydown', (event) => {
   const jump = event.code === 'ArrowLeft' || event.code === 'ArrowRight';
   if (work.hidden || event.altKey || event.metaKey || (event.ctrlKey && !jump)) return;
   // Typing in a box, or pressing Space on a button reached with Tab, keeps its normal meaning.
-  if (event.target.matches('input, select, textarea')) return;
+  // (closest, not matches: the rows of a menu's open list are inside the menu.)
+  if (event.target.closest('input, select, textarea')) return;
   if (event.code === 'Space' && event.target.matches('button')) return;
 
   const action = KEYS[event.code];
