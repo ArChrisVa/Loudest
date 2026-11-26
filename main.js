@@ -55,6 +55,8 @@ const CATEGORY_COLOURS = [
 
 const STATUSES = ['', 'kept', 'rejected'];
 const LANGUAGES = ['el', 'en', 'auto'];
+// The jumps the menu beside the speed offers, in seconds (index.html).
+const SKIP_CHOICES = [1, 5, 10, 30];
 
 function readJson(file, fallback) {
   try {
@@ -184,6 +186,8 @@ function readSettings() {
     language: LANGUAGES.includes(saved?.language)
       ? saved.language
       : app.getPreferredSystemLanguages().some((language) => language.startsWith('el')) ? 'el' : 'auto',
+    // How many seconds the two skip buttons under the picture jump.
+    skip: SKIP_CHOICES.includes(saved?.skip) ? saved.skip : 5,
     // The version of Loudest that last ran here, so that after an update
     // the window can say what is new. null until one has been noted.
     seenVersion: typeof saved?.seenVersion === 'string' && /^\d+\.\d+\.\d+$/.test(saved.seenVersion) ? saved.seenVersion : null,
@@ -193,8 +197,8 @@ function readSettings() {
 ipcMain.handle('settings:get', () => readSettings());
 
 ipcMain.handle('settings:set', (event, changes) => {
-  const { sensitivity, leadIn, language, seenVersion } = { ...readSettings(), ...changes };
-  writeJson(settingsFile, { sensitivity, leadIn, language, seenVersion });
+  const { sensitivity, leadIn, language, skip, seenVersion } = { ...readSettings(), ...changes };
+  writeJson(settingsFile, { sensitivity, leadIn, language, skip, seenVersion });
   // Read back, so that anything out of range comes back corrected.
   return readSettings();
 });
@@ -808,10 +812,14 @@ Menu.setApplicationMenu(null);
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1200,
+    // Wide enough for everything under the picture, the volume slider at
+    // its full length included.
+    width: 1280,
     height: 760,
-    // Below this the player's buttons no longer fit beside the Moments list.
-    minWidth: 960,
+    // Below this the buttons under the picture no longer fit between the
+    // two side panels. (From here up to about 1250 the volume slider is
+    // shorter; it is the one thing there that gives way.)
+    minWidth: 1140,
     minHeight: 560,
     // Shown in the taskbar. Built from __dirname so it is found no matter
     // which folder the app is started from.

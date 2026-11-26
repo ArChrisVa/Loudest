@@ -19,7 +19,7 @@ contextBridge.exposeInMainWorld('loudest', {
   removeRecent: ask('recent:remove'),
 
   // The editor's choices, and the version that last ran here:
-  // { sensitivity, leadIn, language, seenVersion }.
+  // { sensitivity, leadIn, language, skip, seenVersion }.
   getSettings: ask('settings:get'),
   setSettings: ask('settings:set'),
 

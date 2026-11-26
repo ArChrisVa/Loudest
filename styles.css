@@ -456,8 +456,11 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 #message { position: absolute; inset: 0 0 50px 0; display: grid; place-content: center; padding: 20px; text-align: center; z-index: 1; pointer-events: none; }
 #message:empty { display: none; }
 
-.transport { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 12px; }
-.clock { display: flex; align-items: baseline; gap: 8px; }
+/* The two sides are always equally wide, which keeps the play button in the
+   middle under the picture whatever stands on either side. When the window is
+   narrow the volume slider gives way first: it shrinks. */
+.transport { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; padding: 0 12px; }
+.clock { display: flex; align-items: baseline; gap: 8px; min-width: 0; overflow: hidden; white-space: nowrap; }
 .timecode { font: 400 12px var(--mono); letter-spacing: -0.02em; color: var(--faint); }
 .timecode.now { font-size: 14px; font-weight: 500; color: var(--text); }
 .transport-buttons { display: flex; align-items: center; gap: 2px; }
@@ -468,10 +471,13 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 .play .play-icon { margin-left: 1px; }
 .play .pause-icon, .play.playing .play-icon, #mute .muted-icon, #mute.muted .sound-icon { display: none; }
 .play.playing .pause-icon, #mute.muted .muted-icon { display: block; }
-.transport-right { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
-#speed { height: 26px; background-color: transparent; box-shadow: none; font: 500 12px var(--mono); padding-left: 8px; }
-#speed:hover { background-color: var(--raised); }
-#volume { width: 70px; margin: 0 4px; }
+.transport-right { display: flex; align-items: center; justify-content: flex-end; gap: 2px; min-width: 0; }
+.transport-right > * { flex: none; }
+/* field-sizing: each of the two menus is only as wide as what it shows now
+   ("1×"), not as wide as its longest choice ("1.25×"). */
+#speed, #skip-step { height: 26px; background-color: transparent; box-shadow: none; font: 500 12px var(--mono); padding: 0 20px 0 7px; background-position: right 6px center; field-sizing: content; }
+#speed:hover, #skip-step:hover { background-color: var(--raised); }
+#volume { flex: 0 1 70px; width: 70px; min-width: 0; margin: 0 4px; }
 
 /* right */
 .details { display: grid; grid-template-rows: auto 1fr; }

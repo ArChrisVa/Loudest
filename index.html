@@ -95,7 +95,9 @@
         <div id="shortcuts-box" class="box" popover>
           <dl class="key-list">
             <dt><kbd>Space</kbd></dt><dd>Play or pause</dd>
-            <dt><kbd>←</kbd><kbd>→</kbd></dt><dd>Back or forward 5 seconds</dd>
+            <dt><kbd>←</kbd><kbd>→</kbd></dt><dd>Back or forward, as far as the menu beside the speed says</dd>
+            <dt><kbd>Shift</kbd><kbd>←</kbd><kbd>→</kbd></dt><dd>Back or forward 1 second</dd>
+            <dt><kbd>Ctrl</kbd><kbd>←</kbd><kbd>→</kbd></dt><dd>Back or forward 30 seconds</dd>
             <dt><kbd>J</kbd><kbd>L</kbd></dt><dd>Back or forward 10 seconds</dd>
             <dt><kbd>↑</kbd><kbd>↓</kbd></dt><dd>Previous or next moment</dd>
             <dt><kbd>A</kbd></dt><dd>Keep the moment</dd>
@@ -286,15 +288,22 @@
             </div>
             <div class="transport-buttons">
               <button type="button" id="previous-moment" class="ghost" title="Previous moment (Up)" aria-label="Previous moment"><svg class="icon" aria-hidden="true"><use href="#i-skip-back"/></svg></button>
-              <button type="button" id="skip-back" class="ghost" title="Back 5 seconds (Left)" aria-label="Back 5 seconds"><svg class="icon" aria-hidden="true"><use href="#i-caret-double-left"/></svg></button>
+              <button type="button" id="skip-back" class="ghost"><svg class="icon" aria-hidden="true"><use href="#i-caret-double-left"/></svg></button>
               <button type="button" id="play" class="play" title="Play or pause (Space)" aria-label="Play or pause">
                 <svg class="icon play-icon" aria-hidden="true"><use href="#i-play-fill"/></svg>
                 <svg class="icon pause-icon" aria-hidden="true"><use href="#i-pause-fill"/></svg>
               </button>
-              <button type="button" id="skip-forward" class="ghost" title="Forward 5 seconds (Right)" aria-label="Forward 5 seconds"><svg class="icon" aria-hidden="true"><use href="#i-caret-double-right"/></svg></button>
+              <button type="button" id="skip-forward" class="ghost"><svg class="icon" aria-hidden="true"><use href="#i-caret-double-right"/></svg></button>
               <button type="button" id="next-moment" class="ghost" title="Next moment (Down)" aria-label="Next moment"><svg class="icon" aria-hidden="true"><use href="#i-skip-forward"/></svg></button>
             </div>
             <div class="transport-right">
+              <!-- How far the two skip buttons and the left and right keys jump (player.js). -->
+              <select id="skip-step" title="How far the skip buttons jump" aria-label="How far the skip buttons jump">
+                <option value="1">1s</option>
+                <option value="5" selected>5s</option>
+                <option value="10">10s</option>
+                <option value="30">30s</option>
+              </select>
               <select id="speed" title="Playback speed" aria-label="Playback speed">
                 <option value="0.5">0.5×</option>
                 <option value="1" selected>1×</option>

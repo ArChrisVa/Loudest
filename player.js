@@ -8,6 +8,9 @@ const playButton = document.getElementById('play');
 const muteButton = document.getElementById('mute');
 const volume = document.getElementById('volume');
 const speed = document.getElementById('speed');
+const skipStep = document.getElementById('skip-step');
+const skipBack = document.getElementById('skip-back');
+const skipForward = document.getElementById('skip-forward');
 const timeNow = document.getElementById('time-now');
 const timeTotal = document.getElementById('time-total');
 
@@ -56,6 +59,25 @@ function skip(seconds) {
   seekTo(Math.min(end, Math.max(0, (seekWanted ?? player.currentTime) + seconds)));
 }
 
+// How far the two skip buttons and the left and right keys jump: as far as
+// the menu beside the speed says, or 1 second with Shift held down, or 30
+// with Ctrl. `event` is the click or the key press.
+function skipSize(event) {
+  if (event.shiftKey) return 1;
+  if (event.ctrlKey) return 30;
+  return Number(skipStep.value);
+}
+
+// The two buttons say how far they jump when pointed at, and to a screen reader.
+function nameSkipButtons() {
+  const far = skipStep.value === '1' ? '1 second' : `${skipStep.value} seconds`;
+  for (const [button, way, key] of [[skipBack, 'Back', 'Left'], [skipForward, 'Forward', 'Right']]) {
+    button.title = `${way} ${far} (${key}). With Shift 1 second, with Ctrl 30.`;
+    button.setAttribute('aria-label', `${way} ${far}`);
+  }
+}
+nameSkipButtons();
+
 function toggleFullScreen() {
   // The whole stage goes full screen, so the buttons and the strip come along.
   if (document.fullscreenElement) document.exitFullscreen();
@@ -65,8 +87,15 @@ function toggleFullScreen() {
 playButton.addEventListener('click', togglePlay);
 player.addEventListener('click', togglePlay);
 player.addEventListener('dblclick', toggleFullScreen);
-document.getElementById('skip-back').addEventListener('click', () => skip(-5));
-document.getElementById('skip-forward').addEventListener('click', () => skip(5));
+skipBack.addEventListener('click', (event) => skip(-skipSize(event)));
+skipForward.addEventListener('click', (event) => skip(skipSize(event)));
+// The choice is remembered for next time (extras.js puts it back at the
+// start), and the keyboard is handed back, as with the speed.
+skipStep.addEventListener('change', () => {
+  window.loudest.setSettings({ skip: Number(skipStep.value) });
+  nameSkipButtons();
+  skipStep.blur();
+});
 document.getElementById('previous-moment').addEventListener('click', () => stepMoment(-1));
 document.getElementById('next-moment').addEventListener('click', () => stepMoment(1));
 document.getElementById('add-moment').addEventListener('click', () => addMoment());
@@ -141,8 +170,8 @@ const KEYS = {
   KeyK: togglePlay,
   KeyJ: () => skip(-10),
   KeyL: () => skip(10),
-  ArrowLeft: () => skip(-5),
-  ArrowRight: () => skip(5),
+  ArrowLeft: (event) => skip(-skipSize(event)),
+  ArrowRight: (event) => skip(skipSize(event)),
   ArrowUp: () => stepMoment(-1),
   ArrowDown: () => stepMoment(1),
   // M adds a marker, and I and O set where a clip starts and ends, in
@@ -158,7 +187,10 @@ const KEYS = {
 const REPEATING = ['KeyJ', 'KeyL', 'ArrowLeft', 'ArrowRight'];
 
 window.addEventListener('keydown', (event) => {
-  if (work.hidden || event.ctrlKey || event.altKey || event.metaKey) return;
+  // Ctrl belongs to the menus (menus.js), except with the left and right
+  // keys, where it means the long jump.
+  const jump = event.code === 'ArrowLeft' || event.code === 'ArrowRight';
+  if (work.hidden || event.altKey || event.metaKey || (event.ctrlKey && !jump)) return;
   // Typing in a box, or pressing Space on a button reached with Tab, keeps its normal meaning.
   if (event.target.matches('input, select, textarea')) return;
   if (event.code === 'Space' && event.target.matches('button')) return;
@@ -167,5 +199,5 @@ window.addEventListener('keydown', (event) => {
   if (!action) return;
   event.preventDefault();
   if (event.repeat && !REPEATING.includes(event.code)) return;
-  action();
+  action(event);
 });

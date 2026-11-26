@@ -334,6 +334,8 @@ window.loudest.getSettings().then((saved) => {
   sensitivitySlider.value = saved.sensitivity;
   leadInInput.value = saved.leadIn;
   speechLanguage.value = saved.language;
+  skipStep.value = saved.skip;
+  nameSkipButtons();
 });
 
 showHome();
