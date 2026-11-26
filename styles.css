@@ -107,8 +107,12 @@ kbd {
 
 /* ---------- Shared pieces ---------- */
 
-.screen { height: 100%; display: grid; grid-template-rows: 46px 1fr; gap: 6px; padding: 0 6px 6px; }
-#work { grid-template-rows: 46px 1fr clamp(190px, 31vh, 250px); }
+/* A screen fills the window under the top bar. */
+.screen { height: calc(100% - 40px); display: grid; grid-template-rows: 1fr; gap: 6px; padding: 0 6px 6px; }
+#work { grid-template-rows: 1fr clamp(190px, 31vh, 250px); }
+
+/* What belongs to one screen is not shown on the other. */
+body:has(#home[hidden]) .only-home, body:has(#work[hidden]) .only-work { display: none; }
 
 .panel {
   background: var(--surface);
@@ -119,9 +123,39 @@ kbd {
   min-width: 0;
 }
 
-.top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 6px; }
-.top-left, .top-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.top-right { justify-content: flex-end; }
+/* The top bar is the window's own bar too. "app-region: drag" is Electron's
+   way of saying: holding the mouse down here moves the window. Buttons and
+   open boxes are taken out again, or they could not be clicked. The two side
+   columns are equally wide, which keeps the middle in the middle of the
+   window; a long name is cut short before it pushes them. */
+.top {
+  height: 40px;
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
+  align-items: center;
+  gap: 12px;
+  -webkit-app-region: drag;
+}
+.top button, .box { -webkit-app-region: no-drag; }
+.top-middle { min-width: 0; height: 100%; display: flex; align-items: center; }
+.top-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  /* Room for the three buttons Windows draws: titlebar-area-width is how
+     much of the bar is left beside them. */
+  padding-right: calc(100vw - env(titlebar-area-width, 100vw) + 6px);
+}
+.top .primary, .top .ghost { height: 28px; }
+.top .ghost { width: 28px; }
+.top .tabs { height: 100%; }
+.top .tabs > [aria-pressed="true"]::after { bottom: 3px; }
+
+/* File, View, Help. */
+.menubar { display: flex; gap: 2px; padding-left: 8px; }
+.menubar > button { height: 26px; padding: 0 9px; border-radius: var(--r-control); color: var(--dim); font-weight: 500; }
+.menubar > button:hover, .menubar > button:has(+ :popover-open) { background: var(--raised); color: var(--text); }
 
 .ghost { width: 30px; height: 30px; display: grid; place-items: center; border-radius: var(--r-control); color: var(--dim); flex: none; }
 .ghost:hover:not(:disabled) { background: var(--raised); color: var(--text); }
@@ -233,13 +267,27 @@ progress:indeterminate { background: linear-gradient(90deg, var(--hover) 0 40%, 
 .menu:popover-open { display: grid; gap: 1px; }
 .menu p { padding: 6px 8px; color: var(--dim); font-size: 12px; }
 .menu p:empty { display: none; }
-.menu button { height: 32px; padding: 0 8px; border-radius: var(--r-small); text-align: left; }
-.menu button:hover:not(:disabled) { background: var(--hover); }
+.menu button { height: 32px; padding: 0 8px; border-radius: var(--r-small); text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+/* Reached with the arrow keys, an item lights up the way it does under the mouse. */
+.menu button:hover:not(:disabled), .menu button:focus-visible { background: var(--hover); outline: 0; }
+.menu hr { border: 0; height: 1px; margin: 4px 2px; background: var(--line); }
+.keys { font: 400 11px var(--mono); color: var(--faint); }
+
+/* The menus hang from the left edge of their word in the top bar. */
+.menubar .box { right: auto; left: anchor(left); width: 250px; }
+#file-button { anchor-name: --file-button; }
+#view-button { anchor-name: --view-button; }
+#help-button { anchor-name: --help-button; }
+#file-menu { position-anchor: --file-button; }
+#view-menu { position-anchor: --view-button; }
+#help-menu, #shortcuts-box { position-anchor: --help-button; }
+
+#shortcuts-box { width: 310px; padding: 14px; }
+.key-list { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; align-items: center; }
+.key-list dt { display: flex; gap: 4px; }
+.key-list dd { margin: 0; color: var(--dim); }
 
 /* ---------- Home ---------- */
-
-#home .tabs { height: 46px; }
-#home .tabs > [aria-pressed="true"]::after { bottom: 6px; }
 
 .home-panel { padding: 20px 24px; overflow-y: auto; }
 #home-message:not(:empty) { margin-bottom: 14px; }

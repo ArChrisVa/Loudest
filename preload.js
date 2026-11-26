@@ -63,4 +63,8 @@ contextBridge.exposeInMainWorld('loudest', {
   exportClips: ask('export:clips'),
   onClipsProgress: hear('clips:progress'), // { done, total }
   copyText: ask('clipboard:write'),
+
+  // For the Help menu: which version this is, and Loudest's page in the browser.
+  version: ask('app:version'),
+  openGitHub: ask('app:github'),
 });

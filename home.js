@@ -344,5 +344,3 @@ window.addEventListener('drop', (event) => {
   if (!work.hidden && files.length === 1 && !isVideoFile(files[0])) useChatFile(files[0]);
   else openFiles(files);
 });
-
-document.getElementById('back').addEventListener('click', showHome);

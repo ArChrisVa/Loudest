@@ -2,7 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { app, BrowserWindow, clipboard, dialog, ipcMain, utilityProcess } = require('electron');
+const { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, shell, utilityProcess } = require('electron');
 const { findMoments, findQuiet, probeVideo } = require('./analysis');
 const { readChatFile, findChatSpikes, chatDensity } = require('./chat');
 const { downloadChat, cancelDownload } = require('./chat-download');
@@ -699,7 +699,19 @@ ipcMain.handle('clipboard:write', (event, text) => {
   clipboard.writeText(String(text).slice(0, 200000));
 });
 
+// ---------- The Help menu ----------
+
+ipcMain.handle('app:version', () => app.getVersion());
+
+// Opens Loudest's page in the browser. The address is written here and not
+// sent by the window, so nothing in the window can open any other address.
+ipcMain.handle('app:github', () => shell.openExternal('https://github.com/ArChrisVa/Loudest'));
+
 // ---------- The window ----------
+
+// The app draws its own menus in its top bar (index.html, menus.js), so the
+// File / Edit / View menu that Electron adds by itself is switched off.
+Menu.setApplicationMenu(null);
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -708,9 +720,17 @@ function createWindow() {
     // Below this the player's buttons no longer fit beside the Moments list.
     minWidth: 960,
     minHeight: 560,
-    // Shown in the title bar and taskbar. Built from __dirname so it is
-    // found no matter which folder the app is started from.
+    // Shown in the taskbar. Built from __dirname so it is found no matter
+    // which folder the app is started from.
     icon: path.join(__dirname, 'icon.ico'),
+    // The colour of the window before the page has drawn, so it never
+    // flashes white. The same as --base in styles.css.
+    backgroundColor: '#0a0b0d',
+    // No title bar from Windows: the app's top bar takes its place. Windows
+    // still draws minimise, maximise and close itself, over the right end of
+    // that bar, in these colours and at the bar's height.
+    titleBarStyle: 'hidden',
+    titleBarOverlay: { color: '#0a0b0d', symbolColor: '#ecebe4', height: 40 },
     webPreferences: { preload: path.join(__dirname, 'preload.js') },
   });
 
