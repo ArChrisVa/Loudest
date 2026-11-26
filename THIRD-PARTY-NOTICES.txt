@@ -51,6 +51,20 @@ Phosphor Icons
   Licence text: https://github.com/phosphor-icons/core/blob/main/LICENSE
   Source:       https://github.com/phosphor-icons/core
 
+electron-updater 6.8
+  Looks for a newer Loudest on its GitHub page, downloads it and installs it.
+  Licence:      MIT, Copyright (c) 2015 Loopline Systems
+  Licence text: https://github.com/electron-userland/electron-builder/blob/master/LICENSE
+  Source code:  https://github.com/electron-userland/electron-builder
+  It brings these small helpers along, each with its licence text in its own
+  folder inside resources\app.asar, node_modules:
+    MIT:          builder-util-runtime, debug, fs-extra, js-yaml, jsonfile,
+                  lazy-val, lodash.escaperegexp, lodash.isequal, ms,
+                  tiny-typed-emitter, universalify
+    ISC:          semver
+    Blue Oak 1.0: graceful-fs, sax
+    Python 2.0:   argparse
+
 
 FETCHED WHEN FIRST NEEDED
 =========================

@@ -9,6 +9,13 @@
 const menuButtons = [...document.querySelectorAll('.menubar > button')];
 const menus = menuButtons.map((button) => button.popoverTargetElement);
 const shortcutsBox = document.getElementById('shortcuts-box');
+const helpMenu = document.getElementById('help-menu');
+const versionLine = document.getElementById('version');
+const updateButton = document.getElementById('update-button');
+
+// Where Loudest is with a newer version of itself: { state, version,
+// available, percent, problem }. main.js explains the states.
+let update = { state: 'off', version: '' };
 
 // What the items without a button of their own do.
 const MENU_DOES = {
@@ -16,17 +23,51 @@ const MENU_DOES = {
   exit: () => window.close(),
   shortcuts: () => shortcutsBox.showPopover(),
   github: () => window.loudest.openGitHub(),
+  check: async () => {
+    showUpdate(await window.loudest.checkForUpdate());
+    // A copy run from the source: say why nothing happens.
+    if (update.state === 'off') versionLine.textContent += ' · Only the installed Loudest updates itself';
+  },
 };
 
 // The button an item presses, if it has one.
 const buttonOf = (item) => document.getElementById(item.dataset.press);
 
 // Whether an item can be used right now: its button is there and not switched
-// off, and a video is open if it needs one.
+// off, a video is open if it needs one, and Loudest is not already looking
+// for an update if that is what it asks for.
 function canDo(item) {
   const button = buttonOf(item);
   if (button && (button.hidden || button.disabled)) return false;
+  if (item.dataset.do === 'check' && ['checking', 'downloading'].includes(update.state)) return false;
   return !('needsVideo' in item.dataset && work.hidden);
+}
+
+// Brings a menu's items up to date. An item whose button the app has taken
+// away (Transcript without the speech program, "Restart to update" with no
+// update waiting) is left out; the others stay in place and go grey. With an
+// update waiting, "Check for updates" makes way for "Restart to update".
+function refreshMenu(menu) {
+  for (const item of menu.querySelectorAll('[role="menuitem"]')) {
+    item.hidden = Boolean(buttonOf(item)?.hidden) || (item.dataset.do === 'check' && update.state === 'ready');
+    item.disabled = !canDo(item);
+  }
+}
+
+// Shows where things are with a newer version: in the line at the bottom of
+// the Help menu, and as a button in the top bar once one is ready.
+function showUpdate(status) {
+  update = status;
+  const says = {
+    checking: 'Checking…',
+    none: 'Up to date',
+    downloading: `Downloading ${status.available}` + (status.percent ? ` (${status.percent}%)` : ''),
+    ready: `${status.available} is ready`,
+    error: status.problem,
+  }[status.state];
+  versionLine.textContent = 'Version ' + status.version + (says ? ' · ' + says : '');
+  updateButton.hidden = status.state !== 'ready';
+  refreshMenu(helpMenu);
 }
 
 function doItem(item) {
@@ -41,13 +82,7 @@ const usableItems = (menu) => [...menu.querySelectorAll('[role="menuitem"]')].fi
 for (const menu of menus) {
   // Each time a menu opens, its items are brought up to date.
   menu.addEventListener('beforetoggle', (event) => {
-    if (event.newState !== 'open') return;
-    for (const item of menu.querySelectorAll('[role="menuitem"]')) {
-      // An item whose button the app has taken away (Transcript, without the
-      // speech program) is left out; the others stay in place and go grey.
-      item.hidden = Boolean(buttonOf(item)?.hidden);
-      item.disabled = !canDo(item);
-    }
+    if (event.newState === 'open') refreshMenu(menu);
   });
   menu.addEventListener('toggle', (event) => {
     if (event.newState === 'open') usableItems(menu)[0]?.focus();
@@ -56,7 +91,7 @@ for (const menu of menus) {
   menu.addEventListener('click', (event) => {
     const item = event.target.closest('[role="menuitem"]');
     if (!item) return;
-    menu.hidePopover();
+    if (!('stay' in item.dataset)) menu.hidePopover();
     doItem(item);
   });
 
@@ -110,6 +145,8 @@ window.addEventListener('keydown', (event) => {
   if (canDo(item)) doItem(item);
 });
 
-window.loudest.version().then((version) => {
-  document.getElementById('version').textContent = 'Version ' + version;
-});
+// ---------- Updates ----------
+
+updateButton.addEventListener('click', () => window.loudest.installUpdate());
+window.loudest.onUpdate(showUpdate);
+window.loudest.updateStatus().then(showUpdate);

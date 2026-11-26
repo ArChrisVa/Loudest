@@ -64,7 +64,15 @@ contextBridge.exposeInMainWorld('loudest', {
   onClipsProgress: hear('clips:progress'), // { done, total }
   copyText: ask('clipboard:write'),
 
-  // For the Help menu: which version this is, and Loudest's page in the browser.
-  version: ask('app:version'),
+  // Loudest's page, in the browser.
   openGitHub: ask('app:github'),
+
+  // Newer versions. A status is { state, version, available, percent,
+  // problem }; main.js explains the states. `checkForUpdate` answers with the
+  // status after looking; `installUpdate` closes Loudest and puts in the one
+  // that has been downloaded.
+  updateStatus: ask('update:status'),
+  checkForUpdate: ask('update:check'),
+  installUpdate: ask('update:install'),
+  onUpdate: hear('update:status'),
 });

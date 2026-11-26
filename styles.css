@@ -147,7 +147,10 @@ body:has(#home[hidden]) .only-home, body:has(#work[hidden]) .only-work { display
      much of the bar is left beside them. */
   padding-right: calc(100vw - env(titlebar-area-width, 100vw) + 6px);
 }
-.top .primary, .top .ghost { height: 28px; }
+.top .primary, .top .ghost, .top .btn { height: 28px; }
+/* "Restart to update", with a small amber light in front. */
+#update-button { display: flex; align-items: center; gap: 8px; }
+#update-button::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 .top .ghost { width: 28px; }
 .top .tabs { height: 100%; }
 .top .tabs > [aria-pressed="true"]::after { bottom: 3px; }

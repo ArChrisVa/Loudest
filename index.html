@@ -85,7 +85,10 @@
           <button type="button" role="menuitem" data-do="shortcuts">Keyboard shortcuts</button>
           <button type="button" role="menuitem" data-do="github">Loudest on GitHub</button>
           <hr>
-          <p id="version"></p>
+          <!-- data-stay: the menu stays open, because the answer appears in the line under it. -->
+          <button type="button" role="menuitem" data-do="check" data-stay>Check for updates</button>
+          <button type="button" role="menuitem" data-press="update-button">Restart to update</button>
+          <p id="version" role="status"></p>
         </div>
 
         <div id="shortcuts-box" class="box" popover>
@@ -112,6 +115,8 @@
       </div>
 
       <div class="top-right">
+        <!-- Shown once a newer version has been downloaded (menus.js). -->
+        <button type="button" id="update-button" class="btn" hidden>Restart to update</button>
         <button type="button" id="add-videos" class="primary only-home"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Add videos</button>
         <button type="button" id="settings-button" class="ghost only-work" popovertarget="settings-box" title="Settings" aria-label="Settings"><svg class="icon" aria-hidden="true"><use href="#i-sliders-horizontal"/></svg></button>
         <button type="button" id="export-button" class="primary only-work" popovertarget="export-box"><svg class="icon" aria-hidden="true"><use href="#i-export"/></svg>Export</button>

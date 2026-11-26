@@ -2,7 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, shell, utilityProcess } = require('electron');
+const { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, Notification, shell, utilityProcess } = require('electron');
 const { findMoments, findQuiet, probeVideo } = require('./analysis');
 const { readChatFile, findChatSpikes, chatDensity } = require('./chat');
 const { downloadChat, cancelDownload } = require('./chat-download');
@@ -699,9 +699,91 @@ ipcMain.handle('clipboard:write', (event, text) => {
   clipboard.writeText(String(text).slice(0, 200000));
 });
 
-// ---------- The Help menu ----------
+// ---------- Updates ----------
 
-ipcMain.handle('app:version', () => app.getVersion());
+// The installed app looks on its GitHub page for a newer version shortly
+// after it starts and every few hours, downloads it in the background, and
+// then offers "Restart to update". Left alone, the update goes in the next
+// time Loudest is closed. The work is done by electron-updater. It reads
+// where to look from app-update.yml, which the build puts beside the app
+// (the "publish" lines in package.json), and it only takes an installer
+// whose fingerprint matches the one in the release's latest.yml.
+//
+// `state` is one of: 'off' (this copy does not update itself), 'idle',
+// 'checking', 'none' (nothing newer), 'downloading', 'ready', 'error'.
+let update = { state: 'off', version: app.getVersion() };
+let updater = null;
+
+function setUpdate(changes) {
+  update = { ...update, ...changes };
+  tellWindow('update:status', update);
+}
+
+function updateFailed(error) {
+  const text = String(error?.message ?? error);
+  // Nothing released yet counts as being up to date, and so does a release
+  // whose files are still on their way up (GitHub lists a new version a
+  // little before its latest.yml is there).
+  if (/no published versions|cannot find latest\.yml/i.test(text)) {
+    setUpdate({ state: 'none', problem: undefined });
+    return;
+  }
+  console.error('Could not update:', error);
+  const offline = /ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ENETUNREACH|EAI_AGAIN|net::ERR_/i.test(text);
+  setUpdate({ state: 'error', problem: offline ? 'Could not reach GitHub. Check the connection and try again.' : 'The update could not be fetched.' });
+}
+
+async function checkForUpdate() {
+  // One that is on its way or waiting to go in is not asked for again.
+  if (!updater || ['checking', 'downloading', 'ready'].includes(update.state)) return update;
+  try {
+    await updater.checkForUpdates();
+  } catch (error) {
+    updateFailed(error);
+  }
+  return update;
+}
+
+function startUpdates() {
+  // A copy run from the source has no installer to put a newer one in its
+  // place. And the tests, which name their own data folder, must never
+  // install anything on this PC.
+  if (!app.isPackaged || app.commandLine.hasSwitch('user-data-dir')) return;
+
+  updater = require('electron-updater').autoUpdater;
+  updater.autoDownload = true;
+  updater.autoInstallOnAppQuit = true;
+  updater.on('checking-for-update', () => setUpdate({ state: 'checking', problem: undefined }));
+  updater.on('update-available', (info) => setUpdate({ state: 'downloading', available: info.version, percent: 0 }));
+  updater.on('update-not-available', () => setUpdate({ state: 'none' }));
+  updater.on('download-progress', (progress) => setUpdate({ state: 'downloading', percent: Math.round(progress.percent) }));
+  updater.on('update-downloaded', (info) => setUpdate({ state: 'ready', available: info.version }));
+  updater.on('error', updateFailed);
+
+  setUpdate({ state: 'idle' });
+  setTimeout(checkForUpdate, 15 * 1000);
+  setInterval(checkForUpdate, 4 * 60 * 60 * 1000);
+}
+
+ipcMain.handle('update:status', () => update);
+ipcMain.handle('update:check', () => checkForUpdate());
+
+ipcMain.handle('update:install', () => {
+  if (!updater || update.state !== 'ready') return;
+  // The installer shows no window of its own and can take a minute; this
+  // says what is going on meanwhile.
+  if (Notification.isSupported()) {
+    new Notification({
+      title: `Updating Loudest to ${update.available}`,
+      body: 'Loudest closes, installs the update and opens again by itself. That can take up to a minute.',
+      silent: true,
+    }).show();
+  }
+  // true, true: without the installer's window, and open Loudest again after.
+  updater.quitAndInstall(true, true);
+});
+
+// ---------- The Help menu ----------
 
 // Opens Loudest's page in the browser. The address is written here and not
 // sent by the window, so nothing in the window can open any other address.
@@ -747,7 +829,10 @@ function createWindow() {
 // the taskbar keeps the running app and its pinned shortcut together.
 app.setAppUserModelId('com.loudest.app');
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  startUpdates();
+});
 
 app.on('window-all-closed', () => {
   // Do not leave any of the helper programs running after the window is gone.
