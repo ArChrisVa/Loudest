@@ -500,6 +500,19 @@ ipcMain.handle('moments:find', (event, videoPath, wanted) => {
   };
 });
 
+// How loud the video is along its length, for the Sound lane of the timeline:
+// { level, seconds }, one number per `seconds` of video. They are the
+// listening's own numbers (one per 0.48 s), thinned out so that even a
+// ten-hour video is only a few thousand of them.
+ipcMain.handle('sound:level', (event, videoPath) => {
+  needVideoPath(videoPath);
+  const level = readSavedHearing(videoPath)?.level ?? [];
+  const every = Math.max(1, Math.ceil(level.length / 8000));
+  const thinned = [];
+  for (let i = 0; i < level.length; i += every) thinned.push(Math.max(...level.slice(i, i + every)));
+  return { level: thinned, seconds: every * 0.48 };
+});
+
 // ---------- The chat ----------
 
 function saveChat(videoPath, messages) {

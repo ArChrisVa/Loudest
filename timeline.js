@@ -1,5 +1,7 @@
-// The strip under the player: the video laid out from left to right, with a
-// ruler, a marker for every moment, and the playhead.
+// The timeline at the bottom of the work screen: the video laid out from left
+// to right, with a ruler, the playhead, and three lanes: a marker for every
+// moment, the kept moments as the clips they would be cut into, and how loud
+// the sound is.
 //
 //   click or drag      jump to that point
 //   point at it        shows the time and the picture there
@@ -7,14 +9,15 @@
 //   Shift + wheel      slide left and right
 //   the thin bar below shows the whole video and which part is zoomed in on
 //
-// Behind the markers it also shows where nobody speaks (striped), how busy
-// the chat is (the low green hills), and where the selected moment starts and
-// ends (the lighter band, whose two edges can be dragged).
+// It also shows where nobody speaks (striped), how busy the chat is (the low
+// green hills under the sound), and where the selected moment starts and
+// ends (the white band, whose two edges can be dragged).
 //
 // The other scripts talk to it through `timeline`:
 //   timeline.setVideo(url)                      a new video: forget the old one
 //   timeline.setDuration(seconds)
-//   timeline.setMoments(list, selected, colourFor)
+//   timeline.setMoments(list, selected, colourFor, rangeFor)
+//   timeline.setSound([loudness per so many seconds], seconds)
 //   timeline.setRange({ start, end } or null)   of the selected moment
 //   timeline.setQuiet([{ start, end }])
 //   timeline.setChat([0..1 per ten seconds])
@@ -30,6 +33,8 @@ const timeline = (() => {
   const played = document.getElementById('timeline-played');
   const rangeBand = document.getElementById('timeline-range');
   const markerLayer = document.getElementById('timeline-markers');
+  const clipLayer = document.getElementById('timeline-clips');
+  const soundCanvas = document.getElementById('timeline-sound');
   const hover = document.getElementById('timeline-hover');
   const hoverCard = document.getElementById('timeline-hover-card');
   const hoverTime = document.getElementById('timeline-hover-time');
@@ -52,7 +57,9 @@ const timeline = (() => {
   let viewEnd = 0;
   let time = 0;
   let markers = []; // [{ moment, element }]
-  let shown = { moments: [], selected: null, colourFor: () => '' }; // what was last asked for
+  let clips = []; // [{ moment, element }], one per kept moment
+  let shown = { moments: [], selected: null, colourFor: () => '', rangeFor: null }; // what was last asked for
+  let sound = { level: [], seconds: 1, quietest: 0, loudest: 1 };
   let quiet = []; // [{ start, end, element }]
   let chat = [];
   let range = null;
@@ -74,6 +81,11 @@ const timeline = (() => {
     if (!duration || !width()) return;
     drawRuler();
     drawChat();
+    drawSound();
+    for (const { moment, element } of clips) {
+      const span = shown.rangeFor(moment);
+      stretch(element, span.start, span.end);
+    }
     for (const { moment, element } of markers) {
       const visible = moment.time >= viewStart && moment.time <= viewEnd;
       element.hidden = !visible;
@@ -123,15 +135,15 @@ const timeline = (() => {
     const step = TICK_STEPS.find((s) => s / secondsPerPixel >= LABEL_ROOM) || TICK_STEPS.at(-1);
     const small = step / 5; // four unlabelled ticks between two labelled ones
 
-    pen.font = '10px Consolas, monospace';
+    pen.font = '10px "Geist Mono", Consolas, monospace';
     pen.textBaseline = 'top';
     for (let n = Math.ceil(viewStart / small); n * small <= viewEnd; n++) {
       const x = Math.round(toX(n * small)) + 0.5;
       const labelled = n % 5 === 0;
-      pen.fillStyle = '#3a4050';
+      pen.fillStyle = labelled ? '#ffffff38' : '#ffffff1f';
       pen.fillRect(x, labelled ? height - 12 : height - 5, 1, labelled ? 12 : 5);
       if (labelled) {
-        pen.fillStyle = '#9aa1ad';
+        pen.fillStyle = '#5f616b';
         // Rounded, because 15 × 0.2 is not exactly 3 to a computer.
         pen.fillText(formatDuration(Math.round(n * small)), x + 5, 2);
       }
@@ -142,13 +154,35 @@ const timeline = (() => {
   function drawChat() {
     const pen = penFor(chatCanvas);
     const height = chatCanvas.clientHeight;
-    pen.fillStyle = '#6ee7a0';
+    pen.fillStyle = '#6fcf9c';
     const first = Math.max(0, Math.floor(viewStart / CHAT_BIN));
     const last = Math.min(chat.length - 1, Math.floor(viewEnd / CHAT_BIN));
     for (let bin = first; bin <= last; bin++) {
       const x = toX(bin * CHAT_BIN);
       const tall = chat[bin] * height;
       pen.fillRect(x, height - tall, Math.max(1, toX((bin + 1) * CHAT_BIN) - x), tall);
+    }
+  }
+
+  // How loud the sound is, as thin bars either side of a middle line. The
+  // bars where a moment is are bright, so the moments can be seen in the sound.
+  function drawSound() {
+    const pen = penFor(soundCanvas);
+    const height = soundCanvas.clientHeight;
+    if (sound.level.length === 0 || height === 0) return;
+    const range = sound.loudest - sound.quietest || 1;
+    for (let x = 0; x < width(); x += 2) {
+      const from = Math.max(0, Math.floor(toTime(x) / sound.seconds));
+      const to = Math.min(sound.level.length, Math.max(from + 1, Math.ceil(toTime(x + 2) / sound.seconds)));
+      let loudest = -Infinity;
+      for (let i = from; i < to; i++) loudest = Math.max(loudest, sound.level[i]);
+      if (loudest === -Infinity) continue;
+      const share = clamp((loudest - sound.quietest) / range, 0, 1);
+      const tall = 2 + share * share * (height - 6);
+      const seconds = toTime(x + 1);
+      const inMoment = shown.moments.some((moment) => seconds >= moment.time - 2 && seconds <= moment.until + 3);
+      pen.fillStyle = inMoment ? '#c9cad3' : '#3a3c45';
+      pen.fillRect(x, (height - tall) / 2, 1, tall);
     }
   }
 
@@ -260,6 +294,17 @@ const timeline = (() => {
     if (overview.hasPointerCapture(event.pointerId)) moveWindow(event);
   });
 
+  // The two buttons above the timeline: look closer, or see more, around
+  // where the video is now.
+  function zoomBy(factor) {
+    if (!duration) return;
+    const span = clamp((viewEnd - viewStart) * factor, Math.min(SMALLEST_VIEW, duration), duration);
+    const centre = time >= viewStart && time <= viewEnd ? time : (viewStart + viewEnd) / 2;
+    setView(centre - span / 2, centre + span / 2);
+  }
+  document.getElementById('zoom-in').addEventListener('click', () => zoomBy(0.5));
+  document.getElementById('zoom-out').addEventListener('click', () => zoomBy(2));
+
   new ResizeObserver(draw).observe(main);
 
   // ---------- What the other scripts call ----------
@@ -276,6 +321,7 @@ const timeline = (() => {
     }
     api.setQuiet([]);
     api.setChat([]);
+    api.setSound([], 1);
     api.setRange(null);
   };
 
@@ -288,11 +334,26 @@ const timeline = (() => {
     build();
   };
 
-  // `moments` are the ones to draw, `selected` the one to ring, and
-  // `colourFor(moment)` gives the colour of its category ('' if it has none).
-  api.setMoments = (moments, selected, colourFor) => {
-    shown = { moments, selected, colourFor };
+  // `moments` are the ones to draw, `selected` the one to ring,
+  // `colourFor(moment)` gives the colour of its category ('' if it has
+  // none), and `rangeFor(moment)` where it starts and ends.
+  api.setMoments = (moments, selected, colourFor, rangeFor) => {
+    shown = { moments, selected, colourFor, rangeFor };
     build();
+  };
+
+  // `level` holds how loud the video is, one number per `seconds` of it.
+  // The quietest and loudest twentieth are left out when deciding what
+  // counts as quiet and loud, so one bang does not flatten everything else.
+  api.setSound = (level, seconds) => {
+    const sorted = [...level].sort((a, b) => a - b);
+    sound = {
+      level,
+      seconds,
+      quietest: sorted[Math.floor(sorted.length * 0.05)] ?? 0,
+      loudest: sorted[Math.floor(sorted.length * 0.995)] ?? 1,
+    };
+    draw();
   };
 
   api.setRange = (newRange) => {
@@ -316,7 +377,18 @@ const timeline = (() => {
 
   function build() {
     markerLayer.replaceChildren();
+    clipLayer.replaceChildren();
     overviewMarks.replaceChildren();
+    // A kept moment is drawn on the Clips lane from its start to its end.
+    clips = shown.moments.filter((moment) => moment.status === 'kept' && moment !== shown.selected).map((moment) => {
+      const element = document.createElement('div');
+      const name = document.createElement('span');
+      element.className = 'clip ' + moment.kind.toLowerCase().replace(' ', '-');
+      name.textContent = labelOf(moment);
+      element.append(name);
+      clipLayer.append(element);
+      return { moment, element };
+    });
     markers = shown.moments.map((moment) => {
       // 'Raised voice' becomes the style name 'raised-voice'.
       const style = moment.kind.toLowerCase().replace(' ', '-');

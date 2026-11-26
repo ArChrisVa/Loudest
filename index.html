@@ -10,70 +10,90 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <!-- The tile on the Home screen and the Chat box click these for you. -->
+    <!-- The icons, drawn once here and used by name: <svg><use href="#i-house"/></svg>.
+         They are from Phosphor Icons (see THIRD-PARTY-NOTICES.txt). -->
+    <svg class="icons" aria-hidden="true">
+      <symbol id="i-house" viewBox="0 0 256 256"><path d="M219.31,108.68l-80-80a16,16,0,0,0-22.62,0l-80,80A15.87,15.87,0,0,0,32,120v96a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V160h32v56a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V120A15.87,15.87,0,0,0,219.31,108.68ZM208,208H160V152a8,8,0,0,0-8-8H104a8,8,0,0,0-8,8v56H48V120l80-80,80,80Z"/></symbol>
+      <symbol id="i-sliders-horizontal" viewBox="0 0 256 256"><path d="M40,88H73a32,32,0,0,0,62,0h81a8,8,0,0,0,0-16H135a32,32,0,0,0-62,0H40a8,8,0,0,0,0,16Zm64-24A16,16,0,1,1,88,80,16,16,0,0,1,104,64ZM216,168H199a32,32,0,0,0-62,0H40a8,8,0,0,0,0,16h97a32,32,0,0,0,62,0h17a8,8,0,0,0,0-16Zm-48,24a16,16,0,1,1,16-16A16,16,0,0,1,168,192Z"/></symbol>
+      <symbol id="i-export" viewBox="0 0 256 256"><path d="M216,112v96a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V112A16,16,0,0,1,56,96H80a8,8,0,0,1,0,16H56v96H200V112H176a8,8,0,0,1,0-16h24A16,16,0,0,1,216,112ZM93.66,69.66,120,43.31V136a8,8,0,0,0,16,0V43.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,69.66Z"/></symbol>
+      <symbol id="i-waveform" viewBox="0 0 256 256"><path d="M56,96v64a8,8,0,0,1-16,0V96a8,8,0,0,1,16,0ZM88,24a8,8,0,0,0-8,8V224a8,8,0,0,0,16,0V32A8,8,0,0,0,88,24Zm40,32a8,8,0,0,0-8,8V192a8,8,0,0,0,16,0V64A8,8,0,0,0,128,56Zm40,32a8,8,0,0,0-8,8v64a8,8,0,0,0,16,0V96A8,8,0,0,0,168,88Zm40-16a8,8,0,0,0-8,8v96a8,8,0,0,0,16,0V80A8,8,0,0,0,208,72Z"/></symbol>
+      <symbol id="i-film-strip" viewBox="0 0 256 256"><path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,88h80v80H40Zm96-16V56h32V72Zm-16,0H88V56h32Zm0,112v16H88V184Zm16,0h32v16H136Zm0-16V88h80v80Zm80-96H184V56h32ZM72,56V72H40V56ZM40,184H72v16H40Zm176,16H184V184h32v16Z"/></symbol>
+      <symbol id="i-chat-circle" viewBox="0 0 256 256"><path d="M128,24A104,104,0,0,0,36.18,176.88L24.83,210.93a16,16,0,0,0,20.24,20.24l34.05-11.35A104,104,0,1,0,128,24Zm0,192a87.87,87.87,0,0,1-44.06-11.81,8,8,0,0,0-6.54-.67L40,216,52.47,178.6a8,8,0,0,0-.66-6.54A88,88,0,1,1,128,216Z"/></symbol>
+      <symbol id="i-text-align-left" viewBox="0 0 256 256"><path d="M32,64a8,8,0,0,1,8-8H216a8,8,0,0,1,0,16H40A8,8,0,0,1,32,64Zm8,48H168a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16Zm176,24H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Zm-48,40H40a8,8,0,0,0,0,16H168a8,8,0,0,0,0-16Z"/></symbol>
+      <symbol id="i-skip-back" viewBox="0 0 256 256"><path d="M199.81,34a16,16,0,0,0-16.24.43L64,109.23V40a8,8,0,0,0-16,0V216a8,8,0,0,0,16,0V146.77l119.57,74.78A15.95,15.95,0,0,0,208,208.12V47.88A15.86,15.86,0,0,0,199.81,34ZM192,208,64.16,128,192,48.07Z"/></symbol>
+      <symbol id="i-skip-forward" viewBox="0 0 256 256"><path d="M200,32a8,8,0,0,0-8,8v69.23L72.43,34.45A15.95,15.95,0,0,0,48,47.88V208.12a16,16,0,0,0,24.43,13.43L192,146.77V216a8,8,0,0,0,16,0V40A8,8,0,0,0,200,32ZM64,207.93V48.05l127.84,80Z"/></symbol>
+      <symbol id="i-caret-double-left" viewBox="0 0 256 256"><path d="M205.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L131.31,128ZM51.31,128l74.35-74.34a8,8,0,0,0-11.32-11.32l-80,80a8,8,0,0,0,0,11.32l80,80a8,8,0,0,0,11.32-11.32Z"/></symbol>
+      <symbol id="i-caret-double-right" viewBox="0 0 256 256"><path d="M141.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L124.69,128,50.34,53.66A8,8,0,0,1,61.66,42.34l80,80A8,8,0,0,1,141.66,133.66Zm80-11.32-80-80a8,8,0,0,0-11.32,11.32L204.69,128l-74.35,74.34a8,8,0,0,0,11.32,11.32l80-80A8,8,0,0,0,221.66,122.34Z"/></symbol>
+      <symbol id="i-play-fill" viewBox="0 0 256 256"><path d="M240,128a15.74,15.74,0,0,1-7.6,13.51L88.32,229.65a16,16,0,0,1-16.2.3A15.86,15.86,0,0,1,64,216.13V39.87a15.86,15.86,0,0,1,8.12-13.82,16,16,0,0,1,16.2.3L232.4,114.49A15.74,15.74,0,0,1,240,128Z"/></symbol>
+      <symbol id="i-pause-fill" viewBox="0 0 256 256"><path d="M216,48V208a16,16,0,0,1-16,16H160a16,16,0,0,1-16-16V48a16,16,0,0,1,16-16h40A16,16,0,0,1,216,48ZM96,32H56A16,16,0,0,0,40,48V208a16,16,0,0,0,16,16H96a16,16,0,0,0,16-16V48A16,16,0,0,0,96,32Z"/></symbol>
+      <symbol id="i-speaker-high" viewBox="0 0 256 256"><path d="M155.51,24.81a8,8,0,0,0-8.42.88L77.25,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H77.25l69.84,54.31A8,8,0,0,0,160,224V32A8,8,0,0,0,155.51,24.81ZM32,96H72v64H32ZM144,207.64,88,164.09V91.91l56-43.55Zm54-106.08a40,40,0,0,1,0,52.88,8,8,0,0,1-12-10.58,24,24,0,0,0,0-31.72,8,8,0,0,1,12-10.58ZM248,128a79.9,79.9,0,0,1-20.37,53.34,8,8,0,0,1-11.92-10.67,64,64,0,0,0,0-85.33,8,8,0,1,1,11.92-10.67A79.83,79.83,0,0,1,248,128Z"/></symbol>
+      <symbol id="i-speaker-slash" viewBox="0 0 256 256"><path d="M53.92,34.62A8,8,0,1,0,42.08,45.38L73.55,80H32A16,16,0,0,0,16,96v64a16,16,0,0,0,16,16H77.25l69.84,54.31A8,8,0,0,0,160,224V175.09l42.08,46.29a8,8,0,1,0,11.84-10.76ZM32,96H72v64H32ZM144,207.64,88,164.09V95.89l56,61.6Zm42-63.77a24,24,0,0,0,0-31.72,8,8,0,1,1,12-10.57,40,40,0,0,1,0,52.88,8,8,0,0,1-12-10.59Zm-80.16-76a8,8,0,0,1,1.4-11.23l39.85-31A8,8,0,0,1,160,32v74.83a8,8,0,0,1-16,0V48.36l-26.94,21A8,8,0,0,1,105.84,67.91ZM248,128a79.9,79.9,0,0,1-20.37,53.34,8,8,0,0,1-11.92-10.67,64,64,0,0,0,0-85.33,8,8,0,1,1,11.92-10.67A79.83,79.83,0,0,1,248,128Z"/></symbol>
+      <symbol id="i-corners-out" viewBox="0 0 256 256"><path d="M216,48V88a8,8,0,0,1-16,0V56H168a8,8,0,0,1,0-16h40A8,8,0,0,1,216,48ZM88,200H56V168a8,8,0,0,0-16,0v40a8,8,0,0,0,8,8H88a8,8,0,0,0,0-16Zm120-40a8,8,0,0,0-8,8v32H168a8,8,0,0,0,0,16h40a8,8,0,0,0,8-8V168A8,8,0,0,0,208,160ZM88,40H48a8,8,0,0,0-8,8V88a8,8,0,0,0,16,0V56H88a8,8,0,0,0,0-16Z"/></symbol>
+      <symbol id="i-check" viewBox="0 0 256 256"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></symbol>
+      <symbol id="i-x" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></symbol>
+      <symbol id="i-magnifying-glass-minus" viewBox="0 0 256 256"><path d="M152,112a8,8,0,0,1-8,8H80a8,8,0,0,1,0-16h64A8,8,0,0,1,152,112Zm77.66,117.66a8,8,0,0,1-11.32,0l-50.06-50.07a88.11,88.11,0,1,1,11.31-11.31l50.07,50.06A8,8,0,0,1,229.66,229.66ZM112,184a72,72,0,1,0-72-72A72.08,72.08,0,0,0,112,184Z"/></symbol>
+      <symbol id="i-magnifying-glass-plus" viewBox="0 0 256 256"><path d="M152,112a8,8,0,0,1-8,8H120v24a8,8,0,0,1-16,0V120H80a8,8,0,0,1,0-16h24V80a8,8,0,0,1,16,0v24h24A8,8,0,0,1,152,112Zm77.66,117.66a8,8,0,0,1-11.32,0l-50.06-50.07a88.11,88.11,0,1,1,11.31-11.31l50.07,50.06A8,8,0,0,1,229.66,229.66ZM112,184a72,72,0,1,0-72-72A72.08,72.08,0,0,0,112,184Z"/></symbol>
+      <symbol id="i-check-circle" viewBox="0 0 256 256"><path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"/></symbol>
+      <symbol id="i-check-circle-fill" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"/></symbol>
+      <symbol id="i-x-circle" viewBox="0 0 256 256"><path d="M165.66,101.66,139.31,128l26.35,26.34a8,8,0,0,1-11.32,11.32L128,139.31l-26.34,26.35a8,8,0,0,1-11.32-11.32L116.69,128,90.34,101.66a8,8,0,0,1,11.32-11.32L128,116.69l26.34-26.35a8,8,0,0,1,11.32,11.32ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z"/></symbol>
+      <symbol id="i-upload-simple" viewBox="0 0 256 256"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0ZM93.66,77.66,120,51.31V144a8,8,0,0,0,16,0V51.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,77.66Z"/></symbol>
+      <symbol id="i-scissors" viewBox="0 0 256 256"><path d="M157.73,113.13A8,8,0,0,1,159.82,102L227.48,55.7a8,8,0,0,1,9,13.21l-67.67,46.3a7.92,7.92,0,0,1-4.51,1.4A8,8,0,0,1,157.73,113.13Zm80.87,85.09a8,8,0,0,1-11.12,2.08L136,137.7,93.49,166.78a36,36,0,1,1-9-13.19L121.83,128,84.44,102.41a35.86,35.86,0,1,1,9-13.19l143,97.87A8,8,0,0,1,238.6,198.22ZM80,180a20,20,0,1,0-5.86,14.14A19.85,19.85,0,0,0,80,180ZM74.14,90.13a20,20,0,1,0-28.28,0A19.85,19.85,0,0,0,74.14,90.13Z"/></symbol>
+      <symbol id="i-folder-open" viewBox="0 0 256 256"><path d="M245,110.64A16,16,0,0,0,232,104H216V88a16,16,0,0,0-16-16H130.67L102.94,51.2a16.14,16.14,0,0,0-9.6-3.2H40A16,16,0,0,0,24,64V208h0a8,8,0,0,0,8,8H211.1a8,8,0,0,0,7.59-5.47l28.49-85.47A16.05,16.05,0,0,0,245,110.64ZM93.34,64,123.2,86.4A8,8,0,0,0,128,88h72v16H69.77a16,16,0,0,0-15.18,10.94L40,158.7V64Zm112,136H43.1l26.67-80H232Z"/></symbol>
+    </svg>
+
+    <!-- The tile on the Home screen and the Chat tab click these for you. -->
     <input type="file" id="file" accept="video/*,.mkv" multiple hidden>
     <input type="file" id="chat-file" accept=".json,.txt,.log,.csv" hidden>
 
-    <main id="home">
-      <div class="home-tabs">
-        <button type="button" id="tab-recent" aria-pressed="true">Recent VODs</button>
-        <button type="button" id="tab-kept" aria-pressed="false">Kept moments</button>
-      </div>
-      <p id="home-message" role="alert"></p>
-
-      <ul id="recent" class="grid">
-        <li>
-          <button type="button" id="open-video" class="new-tile">
-            <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-            <b>Drop videos here</b>
-            <span>or click to choose</span>
-          </button>
-        </li>
-      </ul>
-
-      <!-- Every kept moment of every video. home.js fills this in. -->
-      <div id="kept" hidden>
-        <select id="kept-category" title="Which category to show" aria-label="Which category to show" hidden></select>
-        <p id="kept-empty" class="dim" hidden>No kept moments yet.</p>
-        <div id="kept-groups"></div>
-      </div>
-    </main>
-
-    <div id="work" hidden>
-      <header class="work-bar">
-        <button type="button" id="back" class="btn" title="Home" aria-label="Home">
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 11l8-7 8 7M6 10v9h12v-9"/></svg>
-        </button>
-        <span id="work-title"></span>
-        <div class="work-tools">
-          <button type="button" id="chat-button" class="btn" popovertarget="chat-box" title="Chat" aria-label="Chat">
-            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-7l-5 4v-4H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>
-          </button>
-          <button type="button" id="settings-button" class="btn" popovertarget="settings-box" title="Settings" aria-label="Settings">
-            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9M15 4.5v5M9 14.5v5"/></svg>
-          </button>
-          <button type="button" id="export-button" class="btn" popovertarget="export-box" title="Export" aria-label="Export">
-            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 4v11M8 11l4 4 4-4M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-          </button>
+    <main id="home" class="screen">
+      <header class="top">
+        <div class="tabs">
+          <button type="button" id="tab-recent" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-film-strip"/></svg>Videos</button>
+          <button type="button" id="tab-kept" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-check-circle"/></svg>Kept moments</button>
+        </div>
+        <span></span>
+        <div class="top-right">
+          <button type="button" id="add-videos" class="primary"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg>Add videos</button>
         </div>
       </header>
 
-      <!-- The three small boxes that open under the buttons above. -->
-      <div id="chat-box" class="box" popover>
-        <div id="chat-none" class="box-rows">
-          <div class="box-row">
-            <input type="text" id="chat-link" placeholder="Link to the stream" aria-label="Link to the stream" autocomplete="off" spellcheck="false">
-            <button type="button" id="chat-get" class="btn">Get chat</button>
-          </div>
-          <button type="button" id="chat-choose" class="btn">Use a chat file</button>
-        </div>
-        <div id="chat-have" class="box-row" hidden>
-          <span id="chat-count"></span>
-          <button type="button" id="chat-remove" class="btn">Remove</button>
-        </div>
-        <p id="chat-status" role="status"></p>
-      </div>
+      <section class="panel home-panel">
+        <p id="home-message" role="alert"></p>
 
+        <ul id="recent" class="grid">
+          <li>
+            <button type="button" id="open-video" class="new-tile">
+              <svg class="icon" aria-hidden="true"><use href="#i-upload-simple"/></svg>
+              <b>Drop videos here</b>
+              <span>or click to choose</span>
+            </button>
+          </li>
+        </ul>
+
+        <!-- Every kept moment of every video. home.js fills this in. -->
+        <div id="kept" hidden>
+          <select id="kept-category" title="Which category to show" aria-label="Which category to show" hidden></select>
+          <p id="kept-empty" class="dim" hidden>No kept moments yet.</p>
+          <div id="kept-groups"></div>
+        </div>
+      </section>
+    </main>
+
+    <div id="work" class="screen" hidden>
+      <header class="top">
+        <div class="top-left">
+          <button type="button" id="back" class="ghost" title="Home" aria-label="Home"><svg class="icon" aria-hidden="true"><use href="#i-house"/></svg></button>
+          <span id="work-title"></span>
+        </div>
+        <span></span>
+        <div class="top-right">
+          <button type="button" id="settings-button" class="ghost" popovertarget="settings-box" title="Settings" aria-label="Settings"><svg class="icon" aria-hidden="true"><use href="#i-sliders-horizontal"/></svg></button>
+          <button type="button" id="export-button" class="primary" popovertarget="export-box"><svg class="icon" aria-hidden="true"><use href="#i-export"/></svg>Export</button>
+        </div>
+      </header>
+
+      <!-- The two small boxes that open under the buttons above. -->
       <div id="settings-box" class="box" popover>
         <label class="box-row">
           Start each moment
@@ -92,112 +112,45 @@
       </div>
 
       <div class="work-body">
-        <div class="stage" id="stage">
-          <p id="message" role="alert"></p>
-          <video id="player"></video>
-
-          <!-- The buttons under the picture. Each has a keyboard key, shown when you point at it. -->
-          <div class="transport">
-            <span id="time-now" class="timecode now">0:00:00</span>
-            <div class="transport-buttons">
-              <button type="button" id="previous-moment" title="Previous moment (Up)" aria-label="Previous moment">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14M18 6l-9 6 9 6z"/></svg>
-              </button>
-              <button type="button" id="skip-back" title="Back 5 seconds (Left)" aria-label="Back 5 seconds">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 6l-6 6 6 6M19 6l-6 6 6 6"/></svg>
-              </button>
-              <button type="button" id="play" class="play" title="Play or pause (Space)" aria-label="Play or pause">
-                <svg class="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>
-                <svg class="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
-              </button>
-              <button type="button" id="skip-forward" title="Forward 5 seconds (Right)" aria-label="Forward 5 seconds">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 6l6 6-6 6M5 6l6 6-6 6"/></svg>
-              </button>
-              <button type="button" id="next-moment" title="Next moment (Down)" aria-label="Next moment">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14M6 6l9 6-9 6z"/></svg>
-              </button>
-              <button type="button" id="add-moment" title="Add a moment here (M)" aria-label="Add a moment here">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 4h11v10.5L12 20l-5.5-5.5zM12 8v5M9.5 10.5h5"/></svg>
-              </button>
-            </div>
-            <div class="transport-right">
-              <select id="speed" title="Playback speed" aria-label="Playback speed">
-                <option value="0.5">0.5×</option>
-                <option value="1" selected>1×</option>
-                <option value="1.25">1.25×</option>
-                <option value="1.5">1.5×</option>
-                <option value="2">2×</option>
-              </select>
-              <button type="button" id="mute" title="Mute" aria-label="Mute">
-                <svg class="sound-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16.5 9a4 4 0 0 1 0 6"/></svg>
-                <svg class="muted-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9zM16 9.5l5 5M21 9.5l-5 5"/></svg>
-              </button>
-              <input type="range" id="volume" min="0" max="1" step="0.05" value="1" title="Volume" aria-label="Volume">
-              <button type="button" id="fullscreen" title="Full screen (F)" aria-label="Full screen">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
-              </button>
-              <span id="time-total" class="timecode">0:00:00</span>
-            </div>
+        <!-- Left: what was found, and what belongs to the video. -->
+        <aside class="panel side">
+          <div class="tabs side-tabs">
+            <button type="button" id="tab-moments" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-waveform"/></svg>Moments <span id="moment-count"></span></button>
+            <button type="button" id="chat-button" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-chat-circle"/></svg>Chat</button>
+            <button type="button" id="tab-transcript" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-text-align-left"/></svg>Transcript</button>
           </div>
 
-          <!-- The whole video as a strip. The Moments list and the keyboard offer
-               the same jumps and changes, so this is hidden from screen readers. -->
-          <div id="timeline" class="timeline" aria-hidden="true">
-            <div id="timeline-main" class="timeline-main">
-              <canvas id="timeline-ruler"></canvas>
-              <div id="timeline-track" class="timeline-track">
-                <div id="timeline-quiet"></div>
-                <canvas id="timeline-chat"></canvas>
-                <div id="timeline-played" class="timeline-played"></div>
-                <div id="timeline-range" class="timeline-range" hidden>
-                  <i class="handle" data-edge="start"></i>
-                  <i class="handle" data-edge="end"></i>
-                </div>
-                <div id="timeline-markers"></div>
-              </div>
-              <div id="timeline-hover" class="timeline-hover" hidden>
-                <div id="timeline-hover-card" class="timeline-hover-card">
-                  <video id="timeline-preview" muted preload="metadata"></video>
-                  <span id="timeline-hover-time"></span>
-                </div>
-              </div>
-              <div id="timeline-playhead" class="timeline-playhead"></div>
-            </div>
-            <div id="timeline-overview" class="timeline-overview">
-              <div id="timeline-overview-marks"></div>
-              <div id="timeline-window" class="timeline-window"></div>
-            </div>
-          </div>
-        </div>
-
-        <aside class="side">
-          <div class="side-tabs">
-            <button type="button" id="tab-moments" aria-pressed="true">Moments <span id="moment-count"></span></button>
-            <button type="button" id="tab-transcript" aria-pressed="false">Transcript</button>
-          </div>
-
-          <section id="moments-panel" class="panel">
+          <section id="moments-panel" class="side-panel">
             <div class="moments-head">
-              <select id="show" title="Which moments to show" aria-label="Which moments to show">
+              <!-- Which moments to show. The four buttons and the menu beside
+                   them set this one hidden menu, which work.js reads. -->
+              <select id="show" hidden>
                 <option value="all">All</option>
                 <option value="review">To review</option>
                 <option value="kept">Kept</option>
                 <option value="rejected">Rejected</option>
-                <optgroup label="Found by" id="kind-options">
-                  <option value="kind:Laugh">Laugh</option>
-                  <option value="kind:Scream">Scream</option>
-                  <option value="kind:Shout">Shout</option>
-                  <option value="kind:Raised voice">Raised voice</option>
-                  <option value="kind:Chat" id="chat-option">Chat</option>
-                  <option value="kind:Added">Added by you</option>
-                </optgroup>
+                <option value="kind:Laugh">Laugh</option>
+                <option value="kind:Scream">Scream</option>
+                <option value="kind:Shout">Shout</option>
+                <option value="kind:Raised voice">Raised voice</option>
+                <option value="kind:Chat" id="chat-option">Chat</option>
+                <option value="kind:Added">Added by you</option>
                 <!-- work.js fills this in, and takes it out while there are no categories. -->
                 <optgroup label="Category" id="category-options"></optgroup>
               </select>
-              <select id="sort" title="Order of the list" aria-label="Order of the list">
-                <option value="strength">Strongest first</option>
-                <option value="time">By time</option>
-              </select>
+              <div class="seg" id="show-status" role="group" aria-label="Which moments to show">
+                <button type="button" data-show="all">All</button>
+                <button type="button" data-show="review">To review</button>
+                <button type="button" data-show="kept">Kept</button>
+                <button type="button" data-show="rejected">Rejected</button>
+              </div>
+              <div class="menus">
+                <select id="show-only" title="Show only one kind or category" aria-label="Show only one kind or category"></select>
+                <select id="sort" title="Order of the list" aria-label="Order of the list">
+                  <option value="strength">Strongest first</option>
+                  <option value="time">By time</option>
+                </select>
+              </div>
               <label class="sensitivity" title="How many moments to find">
                 <span>Fewer</span>
                 <input type="range" id="sensitivity" min="0" max="1" step="0.05" aria-label="How many moments to find">
@@ -208,36 +161,24 @@
             <progress id="analysis-progress" hidden></progress>
             <p id="save-problem" role="alert"></p>
             <ol id="moment-list"></ol>
-
-            <!-- The selected moment: keep or reject it, name it, put it in a
-                 category, write a note, and set where it starts and ends. -->
-            <div id="inspector" class="inspector" hidden>
-              <div class="inspector-top">
-                <span id="inspector-kind"></span>
-                <button type="button" id="keep" title="Keep, and go to the next (A)" aria-label="Keep" aria-pressed="false">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-                </button>
-                <button type="button" id="reject" title="Reject, and go to the next (X)" aria-label="Reject" aria-pressed="false">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
-                </button>
-              </div>
-              <input type="text" id="moment-name" placeholder="Name" aria-label="Name" maxlength="200" autocomplete="off">
-              <div class="category-field">
-                <i id="category-dot"></i>
-                <input type="text" id="moment-category" list="category-names" placeholder="Category" aria-label="Category" maxlength="60" autocomplete="off">
-              </div>
-              <datalist id="category-names"></datalist>
-              <textarea id="moment-note" placeholder="Note" aria-label="Note" rows="2" maxlength="1000"></textarea>
-              <div class="range">
-                <button type="button" id="set-start" title="Start it where the video is now (I)" aria-label="Start the moment where the video is now"></button>
-                <span>to</span>
-                <button type="button" id="set-end" title="End it where the video is now (O)" aria-label="End the moment where the video is now"></button>
-                <span id="range-length"></span>
-              </div>
-            </div>
           </section>
 
-          <section id="transcript-panel" class="panel" hidden>
+          <section id="chat-box" class="side-panel padded" hidden>
+            <div id="chat-none" class="box-rows">
+              <div class="box-row">
+                <input type="text" id="chat-link" placeholder="Link to the stream" aria-label="Link to the stream" autocomplete="off" spellcheck="false">
+                <button type="button" id="chat-get" class="btn">Get chat</button>
+              </div>
+              <button type="button" id="chat-choose" class="btn">Use a chat file</button>
+            </div>
+            <div id="chat-have" class="box-row" hidden>
+              <span id="chat-count"></span>
+              <button type="button" id="chat-remove" class="btn">Remove</button>
+            </div>
+            <p id="chat-status" role="status"></p>
+          </section>
+
+          <section id="transcript-panel" class="side-panel padded" hidden>
             <div id="transcript-start" class="transcript-start">
               <select id="speech-language" title="The language spoken in the video" aria-label="The language spoken in the video">
                 <option value="el">Greek</option>
@@ -260,7 +201,125 @@
             </div>
           </section>
         </aside>
+
+        <!-- Middle: the picture and the buttons under it. -->
+        <section class="panel stage" id="stage">
+          <p id="message" role="alert"></p>
+          <video id="player"></video>
+
+          <!-- Each button has a keyboard key, shown when you point at it. -->
+          <div class="transport">
+            <div class="clock">
+              <span id="time-now" class="timecode now">0:00:00</span>
+              <span id="time-total" class="timecode">0:00:00</span>
+            </div>
+            <div class="transport-buttons">
+              <button type="button" id="previous-moment" class="ghost" title="Previous moment (Up)" aria-label="Previous moment"><svg class="icon" aria-hidden="true"><use href="#i-skip-back"/></svg></button>
+              <button type="button" id="skip-back" class="ghost" title="Back 5 seconds (Left)" aria-label="Back 5 seconds"><svg class="icon" aria-hidden="true"><use href="#i-caret-double-left"/></svg></button>
+              <button type="button" id="play" class="play" title="Play or pause (Space)" aria-label="Play or pause">
+                <svg class="icon play-icon" aria-hidden="true"><use href="#i-play-fill"/></svg>
+                <svg class="icon pause-icon" aria-hidden="true"><use href="#i-pause-fill"/></svg>
+              </button>
+              <button type="button" id="skip-forward" class="ghost" title="Forward 5 seconds (Right)" aria-label="Forward 5 seconds"><svg class="icon" aria-hidden="true"><use href="#i-caret-double-right"/></svg></button>
+              <button type="button" id="next-moment" class="ghost" title="Next moment (Down)" aria-label="Next moment"><svg class="icon" aria-hidden="true"><use href="#i-skip-forward"/></svg></button>
+            </div>
+            <div class="transport-right">
+              <select id="speed" title="Playback speed" aria-label="Playback speed">
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1×</option>
+                <option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option>
+                <option value="2">2×</option>
+              </select>
+              <button type="button" id="mute" class="ghost" title="Mute" aria-label="Mute">
+                <svg class="icon sound-icon" aria-hidden="true"><use href="#i-speaker-high"/></svg>
+                <svg class="icon muted-icon" aria-hidden="true"><use href="#i-speaker-slash"/></svg>
+              </button>
+              <input type="range" id="volume" min="0" max="1" step="0.05" value="1" title="Volume" aria-label="Volume">
+              <button type="button" id="fullscreen" class="ghost" title="Full screen (F)" aria-label="Full screen"><svg class="icon" aria-hidden="true"><use href="#i-corners-out"/></svg></button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right: the selected moment. Keep or reject it, name it, put it in
+             a category, write a note, and set where it starts and ends. -->
+        <aside class="panel details">
+          <div class="tabs details-tabs"><span aria-current="true">Moment</span></div>
+          <p id="inspector-empty" class="dim">Pick a moment in the list or on the timeline.</p>
+          <div id="inspector" class="inspector" hidden>
+            <p class="found-by">Found by <span id="inspector-kind"></span></p>
+            <div class="verdict">
+              <button type="button" id="keep" title="Keep, and go to the next (A)" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Keep<kbd>A</kbd></button>
+              <button type="button" id="reject" title="Reject, and go to the next (X)" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg>Reject<kbd>X</kbd></button>
+            </div>
+            <label>Name<input type="text" id="moment-name" maxlength="200" autocomplete="off"></label>
+            <label>Category
+              <span class="category-field">
+                <i id="category-dot"></i>
+                <input type="text" id="moment-category" list="category-names" maxlength="60" autocomplete="off">
+              </span>
+            </label>
+            <datalist id="category-names"></datalist>
+            <label>Note<textarea id="moment-note" rows="2" maxlength="1000"></textarea></label>
+            <div class="range">
+              <label>Start<button type="button" id="set-start" class="field" title="Start it where the video is now (I)"></button></label>
+              <label>End<button type="button" id="set-end" class="field" title="End it where the video is now (O)"></button></label>
+              <span id="range-length"></span>
+            </div>
+          </div>
+        </aside>
       </div>
+
+      <!-- The whole video laid out from left to right. The Moments list and
+           the keyboard offer the same jumps and changes, so this is hidden
+           from screen readers. -->
+      <section id="timeline" class="panel timeline" aria-hidden="true">
+        <div class="timeline-bar">
+          <div class="timeline-tools">
+            <button type="button" id="add-moment" class="ghost" title="Add a moment here (M)" aria-label="Add a moment here" tabindex="-1"><svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></button>
+          </div>
+          <span id="timeline-selected"></span>
+          <div class="timeline-zoom">
+            <button type="button" id="zoom-out" class="ghost" title="Show more of the video" tabindex="-1"><svg class="icon" aria-hidden="true"><use href="#i-magnifying-glass-minus"/></svg></button>
+            <button type="button" id="zoom-in" class="ghost" title="Look closer" tabindex="-1"><svg class="icon" aria-hidden="true"><use href="#i-magnifying-glass-plus"/></svg></button>
+          </div>
+        </div>
+        <div class="timeline-body">
+          <div class="lane-names"><span></span><span>Moments</span><span>Clips</span><span>Sound</span></div>
+          <div id="timeline-main" class="timeline-main">
+            <canvas id="timeline-ruler"></canvas>
+            <div id="timeline-track" class="timeline-track">
+              <div class="lane lane-moments"><div id="timeline-markers"></div></div>
+              <div class="lane lane-clips">
+                <div id="timeline-quiet"></div>
+                <div id="timeline-clips"></div>
+                <div id="timeline-range" class="timeline-range" hidden>
+                  <i class="handle" data-edge="start"></i>
+                  <i class="handle" data-edge="end"></i>
+                </div>
+              </div>
+              <div class="lane lane-sound">
+                <canvas id="timeline-sound"></canvas>
+                <canvas id="timeline-chat"></canvas>
+              </div>
+              <div id="timeline-played" class="timeline-played"></div>
+            </div>
+            <div id="timeline-hover" class="timeline-hover" hidden>
+              <div id="timeline-hover-card" class="timeline-hover-card">
+                <video id="timeline-preview" muted preload="metadata"></video>
+                <span id="timeline-hover-time"></span>
+              </div>
+            </div>
+            <div id="timeline-playhead" class="timeline-playhead"></div>
+          </div>
+        </div>
+        <div class="timeline-foot">
+          <div id="timeline-overview" class="timeline-overview">
+            <div id="timeline-overview-marks"></div>
+            <div id="timeline-window" class="timeline-window"></div>
+          </div>
+        </div>
+      </section>
     </div>
 
     <!-- One card on the Home screen. home.js copies this for each video. -->
@@ -271,7 +330,7 @@
           <span class="card-title"></span>
           <span class="card-meta"></span>
         </button>
-        <button type="button" class="card-remove" title="Remove from this list">&times;</button>
+        <button type="button" class="card-remove" title="Remove from this list"><svg class="icon" aria-hidden="true"><use href="#i-x"/></svg></button>
       </li>
     </template>
 

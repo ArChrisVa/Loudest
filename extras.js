@@ -1,5 +1,6 @@
-// What sits around the moments on the work screen: the stream's chat, the
-// transcript, the settings, and getting the moments out to the editing program.
+// What sits around the moments on the work screen: the tabs of the panel on
+// the left with the stream's chat and the transcript, the settings, and
+// getting the moments out to the editing program.
 
 const chatButton = document.getElementById('chat-button');
 const chatBox = document.getElementById('chat-box');
@@ -51,6 +52,7 @@ async function showExtras() {
   transcript = null;
   transcriptProblem.textContent = '';
   transcriptSearch.value = '';
+  showSideTab(momentsTab);
   showChatBusy();
   showTranscript();
 
@@ -119,8 +121,8 @@ chatFile.addEventListener('change', () => {
 async function useChatFile(file) {
   const videoPath = openPath;
   const chatPath = window.loudest.pathForFile(file);
-  // Whatever comes of it is said in the Chat box, so make sure that is open.
-  if (!chatBox.matches(':popover-open')) chatBox.showPopover();
+  // Whatever comes of it is said on the Chat tab, so make sure that is showing.
+  showSideTab(chatButton);
   if (!chatPath) {
     chatStatus.textContent = "That file can't be read from where it is. Save it to a folder on this PC first.";
     return;
@@ -216,15 +218,17 @@ window.loudest.onClipsProgress(({ done, total }) => {
 
 // ---------- The transcript ----------
 
-function showSideTab(showTranscriptPanel) {
-  momentsTab.setAttribute('aria-pressed', !showTranscriptPanel);
-  transcriptTab.setAttribute('aria-pressed', showTranscriptPanel);
-  momentsPanel.hidden = showTranscriptPanel;
-  transcriptPanel.hidden = !showTranscriptPanel;
+// The tabs of the panel on the left, each with what it shows.
+const SIDE_TABS = [[momentsTab, momentsPanel], [chatButton, chatBox], [transcriptTab, transcriptPanel]];
+
+function showSideTab(chosen) {
+  for (const [tab, panel] of SIDE_TABS) {
+    tab.setAttribute('aria-pressed', tab === chosen);
+    panel.hidden = tab !== chosen;
+  }
 }
 
-momentsTab.addEventListener('click', () => showSideTab(false));
-transcriptTab.addEventListener('click', () => showSideTab(true));
+for (const [tab] of SIDE_TABS) tab.addEventListener('click', () => showSideTab(tab));
 
 // Shows whichever fits: the button that starts the writing out, how far it
 // has got, or the text itself.

@@ -39,6 +39,19 @@ YAMNet
   Source:       https://github.com/tensorflow/models/tree/master/research/audioset/yamnet
 
 
+Geist and Geist Mono
+  The letters and numbers on screen.
+  Licence:      SIL Open Font License 1.1, Copyright 2026 The Geist Project Authors
+  Licence text: resources\app.asar, fonts\LICENSE.txt
+  Source:       https://github.com/vercel/geist-font
+
+Phosphor Icons
+  The small pictures on the buttons.
+  Licence:      MIT, Copyright (c) 2023 Phosphor Icons
+  Licence text: https://github.com/phosphor-icons/core/blob/main/LICENSE
+  Source:       https://github.com/phosphor-icons/core
+
+
 FETCHED WHEN FIRST NEEDED
 =========================
 

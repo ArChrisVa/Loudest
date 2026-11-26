@@ -41,6 +41,8 @@ contextBridge.exposeInMainWorld('loudest', {
 
   // The moments found in a video that has been listened to.
   findMoments: ask('moments:find'),
+  // How loud the video is along its length: { level, seconds }.
+  soundLevel: ask('sound:level'),
 
   // The stream's chat, from a link or from a file.
   guessChatLink: ask('chat:guessLink'),

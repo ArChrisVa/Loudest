@@ -20,6 +20,7 @@
       "styles.css",
       "icon.ico",
       "models/**",
+      "fonts/**",
       "tools/**",
       "!node_modules/onnxruntime-node/bin/napi-v*/{darwin,linux}${/*}",
       "!node_modules/onnxruntime-node/bin/napi-v*/win32/arm64${/*}",
@@ -27,6 +28,7 @@
     ],
     "asarUnpack": [
       "models/**",
+      "fonts/**",
       "tools/**",
       "node_modules/ffmpeg-static/**",
       "node_modules/onnxruntime-node/**"

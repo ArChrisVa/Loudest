@@ -25,6 +25,10 @@ const noteInput = document.getElementById('moment-note');
 const startButton = document.getElementById('set-start');
 const endButton = document.getElementById('set-end');
 const rangeLength = document.getElementById('range-length');
+const statusButtons = [...document.querySelectorAll('#show-status button')];
+const showOnly = document.getElementById('show-only');
+const inspectorEmpty = document.getElementById('inspector-empty');
+const timelineSelected = document.getElementById('timeline-selected');
 
 // Goes up every time a video is opened or closed, so an answer that arrives
 // late for an earlier video can be recognised and ignored.
@@ -66,6 +70,7 @@ function showVideo(entry, atTime) {
   openPath = entry.path;
   player.src = entry.url;
   timeline.setVideo(entry.url);
+  setPictureSource(entry.url);
   loadMoments(entry.path, atTime);
   showExtras();
 }
@@ -76,6 +81,7 @@ function closeVideo() {
   player.removeAttribute('src');
   player.load();
   timeline.setVideo('');
+  setPictureSource('');
   run += 1;
   openPath = '';
 }
@@ -123,6 +129,10 @@ async function loadMoments(videoPath, atTime) {
   listenState = outcome.error ? 'failed' : 'done';
   analysisStatus.textContent = outcome.error ?? '';
   findAgain();
+
+  // The Sound lane of the timeline: how loud the video is along its length.
+  const sound = await window.loudest.soundLevel(videoPath).catch(() => null);
+  if (sound && thisRun === run) timeline.setSound(sound.level, sound.seconds);
 }
 
 // While the open video is being listened to: how far it has got.
@@ -240,8 +250,11 @@ function showMoments() {
   if (selected && !list.includes(selected)) selected = null;
 
   momentCount.textContent = moments.length ? list.length : '';
+  showFilter();
+  // Pictures asked for by rows that are about to go are no longer wanted.
+  picturesWanted = [];
   momentList.replaceChildren(...list.map(buildMoment));
-  timeline.setMoments(list, selected, (moment) => colourOf(moment.category));
+  timeline.setMoments(list, selected, (moment) => colourOf(moment.category), rangeOf);
 
   if (listenState === 'done') {
     if (list.length) analysisStatus.textContent = '';
@@ -261,51 +274,155 @@ function styleOf(kind) {
   return kind.toLowerCase().replace(' ', '-');
 }
 
-// One row: the time, a label, a dot for every further reason the moment is
-// there, and a bar whose length says how strong it is.
+// A piece of a row, with its style name.
+function part(tag, className, ...children) {
+  const element = document.createElement(tag);
+  element.className = className;
+  element.append(...children);
+  return element;
+}
+
+// One row: a small picture of the moment, what it is called, a square in the
+// colour of why it was found, the time, and on the right whether it was kept
+// or rejected, a small square for every further reason, and a three-step
+// meter for how strong it is.
 function buildMoment(moment) {
   const item = document.createElement('li');
   const button = document.createElement('button');
-  const when = document.createElement('span');
-  const label = document.createElement('span');
-  const more = document.createElement('span');
-  const bar = document.createElement('span');
   const text = labelOf(moment);
+  const time = formatDuration(moment.time);
+  const kindName = moment.kind === 'Added' ? 'Added by you' : moment.kind;
 
   button.type = 'button';
   // The status ('kept', 'rejected') is a style name too: kept rows get a tick, rejected ones fade.
   button.className = `moment ${styleOf(moment.kind)} ${moment.status}`;
   if (moment === selected) button.setAttribute('aria-current', 'true');
 
-  when.className = 'when';
-  when.textContent = formatDuration(moment.time);
+  const picture = document.createElement('img');
+  picture.alt = '';
+  picture.hidden = true;
+  showPicture(picture, rangeOf(moment).start);
 
-  label.className = 'label';
-  if (!moment.name && !moment.category) label.classList.add('plain');
+  const label = part('span', 'label');
   if (moment.category) label.append(dotFor(colourOf(moment.category)));
   label.append(text);
+  const sub = part('span', 'sub', part('i', 'sq'), part('span', 'when', time));
+  // The kind is already what the row is called when it has no name of its own.
+  if (text !== moment.kind) sub.append(kindName);
 
-  more.className = 'signs';
-  for (const sign of moment.signs.slice(1)) {
-    const pip = document.createElement('i');
-    pip.className = styleOf(sign);
-    more.append(pip);
+  const mark = part('span', 'mark');
+  if (moment.status) mark.append(iconOf(moment.status === 'kept' ? 'check-circle-fill' : 'x-circle'));
+  const more = part('span', 'signs', ...moment.signs.slice(1).map((sign) => part('i', styleOf(sign))));
+  const how = part('span', 'how', more);
+  if (moment.kind !== 'Added') {
+    const meter = part('span', 'meter', part('i', ''), part('i', ''), part('i', ''));
+    meter.dataset.steps = moment.strength >= 0.67 ? 3 : moment.strength >= 0.34 ? 2 : 1;
+    how.append(meter);
   }
 
-  bar.className = 'strength';
-  bar.style.width = Math.round(moment.strength * 100) + '%';
-
-  // The dots, the tick and the fading are only visible; this says the same aloud.
-  const aloud = [`${when.textContent} ${text}`];
+  // The squares, the tick and the fading are only visible; this says the same aloud.
+  const aloud = [`${time} ${text}`];
   if (moment.signs.length > 1) aloud.push(moment.signs.join(' and '));
   if (moment.status) aloud.push(moment.status);
   button.setAttribute('aria-label', aloud.join(', '));
-  button.append(when, label, more, bar);
+  button.append(part('span', 'shot', picture), part('span', 'text', label, sub), part('span', 'state', mark, how));
   button.addEventListener('click', () => jumpTo(moment));
 
   item.append(button);
   return item;
 }
+
+// ---------- The small pictures in the list ----------
+
+// A second, silent player that is sent to one moment after the other and
+// has its picture copied. Jumping takes it a moment, so the pictures arrive
+// one by one; each is kept, so a row that is drawn again has it at once.
+const pictureSource = document.createElement('video');
+const pictures = new Map(); // whole second -> the picture, as a data: address
+let picturesWanted = []; // [{ second, image }], the next one first
+let pictureJob = null; // the one the player has been sent to
+
+pictureSource.muted = true;
+pictureSource.preload = 'metadata';
+
+function setPictureSource(url) {
+  pictures.clear();
+  picturesWanted = [];
+  pictureJob = null;
+  if (url) {
+    pictureSource.src = url;
+  } else {
+    pictureSource.removeAttribute('src');
+    pictureSource.load();
+  }
+}
+
+// Puts the picture of the video at `seconds` into `image`, now if it is
+// known and otherwise when its turn has come.
+function showPicture(image, seconds) {
+  const second = Math.floor(seconds);
+  if (pictures.has(second)) {
+    image.src = pictures.get(second);
+    image.hidden = false;
+    return;
+  }
+  picturesWanted.push({ second, image });
+  nextPicture();
+}
+
+function nextPicture() {
+  // Nothing to do, busy, or there is no picture to copy (not loaded yet, or sound only).
+  if (pictureJob || picturesWanted.length === 0 || pictureSource.videoWidth === 0) return;
+  pictureJob = picturesWanted.shift();
+  if (pictures.has(pictureJob.second)) pictureArrived();
+  else pictureSource.currentTime = pictureJob.second + 0.05;
+}
+
+function pictureArrived() {
+  const job = pictureJob;
+  pictureJob = null;
+  if (job && !pictures.has(job.second)) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 144;
+    canvas.height = 80;
+    canvas.getContext('2d').drawImage(pictureSource, 0, 0, canvas.width, canvas.height);
+    pictures.set(job.second, canvas.toDataURL('image/jpeg', 0.6));
+  }
+  if (job && pictures.has(job.second)) {
+    job.image.src = pictures.get(job.second);
+    job.image.hidden = false;
+  }
+  nextPicture();
+}
+
+pictureSource.addEventListener('seeked', pictureArrived);
+pictureSource.addEventListener('loadedmetadata', nextPicture);
+
+// ---------- Which moments to show ----------
+
+const STATUS_CHOICES = ['all', 'review', 'kept', 'rejected'];
+
+// The hidden "show" menu holds the choice. This puts it on the four buttons
+// and on the menu beside them, which offers the kinds and the categories.
+function showFilter() {
+  for (const button of statusButtons) button.setAttribute('aria-pressed', button.dataset.show === showSelect.value);
+  const others = [...showSelect.options].filter((option) => !STATUS_CHOICES.includes(option.value) && !option.hidden);
+  showOnly.replaceChildren(new Option('Any kind', ''), ...others.map((option) => new Option(option.textContent, option.value)));
+  showOnly.value = others.some((option) => option.value === showSelect.value) ? showSelect.value : '';
+}
+
+for (const button of statusButtons) {
+  button.addEventListener('click', () => {
+    showSelect.value = button.dataset.show;
+    showMoments();
+  });
+}
+
+showOnly.addEventListener('change', () => {
+  showSelect.value = showOnly.value || 'all';
+  showOnly.blur();
+  showMoments();
+});
 
 function colourOf(categoryName) {
   return categories.find((category) => category.name === categoryName)?.colour || '';
@@ -342,7 +459,9 @@ function rangeOf(moment) {
 // Fills the box under the list with the selected moment, or hides it.
 function showSelected() {
   inspector.hidden = !selected;
+  inspectorEmpty.hidden = Boolean(selected);
   timeline.setRange(selected ? rangeOf(selected) : null);
+  timelineSelected.replaceChildren();
   if (!selected) return;
 
   inspectorKind.textContent = selected.kind === 'Added' ? 'Added by you' : selected.signs.join(' + ');
@@ -358,6 +477,11 @@ function showSelected() {
   startButton.textContent = formatDuration(range.start);
   endButton.textContent = formatDuration(range.end);
   rangeLength.textContent = Math.round(range.end - range.start) + ' s';
+  // Above the timeline: which moment the white band is, and from when to when.
+  timelineSelected.append(
+    part('b', '', labelOf(selected)),
+    part('span', '', `${formatDuration(range.start)} – ${formatDuration(range.end)}`),
+  );
 }
 
 // ---------- Working on the moments ----------

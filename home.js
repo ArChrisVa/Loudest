@@ -50,6 +50,18 @@ function countOf(number, word) {
   return `${number} ${word}${number === 1 ? '' : 's'}`;
 }
 
+// One of the icons drawn at the top of index.html, by its name.
+function iconOf(name) {
+  const SVG = 'http://www.w3.org/2000/svg';
+  const icon = document.createElementNS(SVG, 'svg');
+  const use = document.createElementNS(SVG, 'use');
+  icon.setAttribute('class', 'icon');
+  icon.setAttribute('aria-hidden', 'true');
+  use.setAttribute('href', '#i-' + name);
+  icon.append(use);
+  return icon;
+}
+
 // A round mark in a category's colour.
 function dotFor(colour) {
   const dot = document.createElement('i');
@@ -314,6 +326,7 @@ keptTab.addEventListener('click', () => showTab(true));
 keptCategory.addEventListener('change', showKept);
 
 document.getElementById('open-video').addEventListener('click', () => fileInput.click());
+document.getElementById('add-videos').addEventListener('click', () => fileInput.click());
 
 fileInput.addEventListener('change', () => {
   const files = [...fileInput.files];
