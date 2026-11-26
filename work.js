@@ -508,7 +508,7 @@ function select(moment) {
 // Selects a moment, goes to its start, and plays it.
 function jumpTo(moment) {
   select(moment);
-  player.currentTime = rangeOf(moment).start;
+  seekTo(rangeOf(moment).start);
   play();
 }
 
@@ -645,7 +645,7 @@ timeline.onMoment = jumpTo;
 // follows the edge, so it is clear where the cut will be.
 timeline.onRange = (edge, seconds, finished) => {
   setEdge(edge, seconds, finished);
-  player.currentTime = seconds;
+  seekTo(seconds);
 };
 
 // Choosing from a menu leaves the keyboard on the menu; hand it back, so the

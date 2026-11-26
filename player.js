@@ -23,9 +23,37 @@ function togglePlay() {
   else player.pause();
 }
 
+// Where the video is to go next, while the player is still busy with its
+// last jump. Nothing is waiting most of the time.
+let seekWanted = null;
+
+// Sends the video to `seconds`. A jump takes the player a moment, longer in
+// a big file, and a jump started before the last one has finished throws
+// that one away: dragging along the timeline would then show no new picture
+// until the mouse stopped. So while the player is busy only the latest place
+// is remembered, and it goes there as soon as it is free. The timeline's
+// small picture works the same way.
+function seekTo(seconds) {
+  if (player.seeking) {
+    seekWanted = seconds;
+    showTime(true);
+  } else {
+    seekWanted = null;
+    player.currentTime = seconds;
+  }
+}
+
+// The clock and the playhead show where the video is going, not the jump it
+// is still finishing on the way there.
+function showTime(reveal) {
+  const now = seekWanted ?? player.currentTime;
+  timeNow.textContent = formatDuration(now);
+  timeline.setTime(now, reveal);
+}
+
 function skip(seconds) {
   const end = Number.isFinite(player.duration) ? player.duration : 0;
-  player.currentTime = Math.min(end, Math.max(0, player.currentTime + seconds));
+  seekTo(Math.min(end, Math.max(0, (seekWanted ?? player.currentTime) + seconds)));
 }
 
 function toggleFullScreen() {
@@ -69,18 +97,21 @@ player.addEventListener('durationchange', () => {
   timeTotal.textContent = formatDuration(known ? player.duration : 0);
   timeline.setDuration(player.duration);
 });
-player.addEventListener('timeupdate', () => {
-  timeNow.textContent = formatDuration(player.currentTime);
-  timeline.setTime(player.currentTime, false);
+player.addEventListener('timeupdate', () => showTime(false));
+player.addEventListener('seeking', () => showTime(true));
+// A jump has finished: on to the place that was asked for in the meantime.
+player.addEventListener('seeked', () => {
+  if (seekWanted === null) return;
+  const next = seekWanted;
+  seekWanted = null;
+  player.currentTime = next;
 });
-player.addEventListener('seeking', () => {
-  timeNow.textContent = formatDuration(player.currentTime);
-  timeline.setTime(player.currentTime, true);
+// Another video, or none: a place in the last one means nothing now.
+player.addEventListener('emptied', () => {
+  seekWanted = null;
 });
 
-timeline.onSeek = (seconds) => {
-  player.currentTime = seconds;
-};
+timeline.onSeek = seekTo;
 
 // The file could not be opened at all.
 player.addEventListener('error', () => {

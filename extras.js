@@ -266,7 +266,7 @@ function showLines() {
     said.textContent = text;
     row.append(when, said);
     row.addEventListener('click', () => {
-      player.currentTime = start;
+      seekTo(start);
       play();
     });
     item.dataset.plain = plain(text);
