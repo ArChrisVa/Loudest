@@ -37,10 +37,11 @@
      video or over a picture. */
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.07'/%3E%3C/svg%3E");
 
-  /* Corners get tighter the deeper an element sits. */
-  --r-panel: 10px;
-  --r-control: 6px;
-  --r-small: 4px;
+  /* Corners are barely rounded: a hint on the panels, less on what sits
+     in them. */
+  --r-panel: 3px;
+  --r-control: 2px;
+  --r-small: 2px;
   --mono: "Geist Mono", ui-monospace, Consolas, monospace;
 }
 
@@ -108,7 +109,7 @@ kbd {
   padding: 0 4px;
   display: inline-grid;
   place-items: center;
-  border-radius: 3px;
+  border-radius: 2px;
   color: var(--dim);
   background: #ffffff0d;
   box-shadow: 0 0 0 1px var(--line) inset, 0 1px 0 #0008;
@@ -457,7 +458,7 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 .thumb { display: block; aspect-ratio: 16 / 9; border-radius: var(--r-control); position: relative; overflow: hidden; background: var(--raised); box-shadow: 0 0 0 1px #000a; margin-bottom: 6px; transition: box-shadow .15s; }
 .card-open:hover:not(:disabled) .thumb { box-shadow: 0 0 0 1px #000a, 0 0 0 2px var(--line-strong); }
 .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.dur { position: absolute; right: 6px; bottom: 6px; padding: 1px 5px; border-radius: 3px; background: #000c; font: 500 11px var(--mono); }
+.dur { position: absolute; right: 6px; bottom: 6px; padding: 1px 5px; border-radius: 2px; background: #000c; font: 500 11px var(--mono); }
 .dur:empty { display: none; }
 .card-title { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card-meta { color: var(--dim); font-size: 12px; }
@@ -714,7 +715,7 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
    the colour of everything kept. A click selects the moment. */
 .clip { position: absolute; top: 5px; bottom: 5px; min-width: 3px; border-radius: var(--r-small); background: color-mix(in srgb, var(--accent) 12%, transparent); backdrop-filter: brightness(2.1); box-shadow: 0 0 0 1.5px var(--accent) inset; overflow: hidden; }
 .clip:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
-.clip span { position: absolute; left: 4px; top: 4px; padding: 0 5px; border-radius: 3px; background: #000000b3; font-size: 10.5px; font-weight: 500; line-height: 16px; white-space: nowrap; color: var(--text); }
+.clip span { position: absolute; left: 4px; top: 4px; padding: 0 5px; border-radius: 2px; background: #000000b3; font-size: 10.5px; font-weight: 500; line-height: 16px; white-space: nowrap; color: var(--text); }
 
 /* The selected moment, from its start to its end. Its two edges can be dragged. */
 .timeline-range { position: absolute; top: 3px; bottom: 3px; border-radius: var(--r-small); box-shadow: 0 0 0 2px var(--text) inset; backdrop-filter: brightness(2.3); pointer-events: none; }
@@ -731,7 +732,7 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 
 .timeline-hover { position: absolute; top: 0; bottom: 0; width: 1px; background: #ffffff40; pointer-events: none; z-index: 2; }
 .timeline-hover-card { position: absolute; bottom: calc(100% - 18px); transform: translateX(-50%); display: grid; gap: 4px; justify-items: center; padding: 4px; border-radius: var(--r-control); background: var(--raised); box-shadow: 0 0 0 1px var(--line-strong), 0 10px 30px -6px #000c; white-space: nowrap; }
-.timeline-hover-card video { width: 128px; aspect-ratio: 16 / 9; border-radius: 3px; background: #000; display: block; }
+.timeline-hover-card video { width: 128px; aspect-ratio: 16 / 9; border-radius: 2px; background: #000; display: block; }
 #timeline-hover-time { font: 500 11px var(--mono); padding: 0 4px 1px; }
 
 /* The whole video in one bar: a dot for every moment, a frame around the
@@ -741,4 +742,4 @@ dialog li { display: flex; align-items: flex-start; gap: 12px; }
 #timeline-overview-marks i { position: absolute; top: 3.5px; width: 3px; height: 3px; margin-left: -1.5px; border-radius: 50%; background: var(--k); }
 #timeline-overview-now { position: absolute; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--now); pointer-events: none; }
 #timeline-overview-marks i.rejected { opacity: .3; }
-.timeline-window { position: absolute; top: -2px; bottom: -2px; min-width: 6px; border-radius: 4px; box-shadow: 0 0 0 1px #ffffff40 inset; background: #ffffff0d; }
+.timeline-window { position: absolute; top: -2px; bottom: -2px; min-width: 6px; border-radius: 3px; box-shadow: 0 0 0 1px #ffffff40 inset; background: #ffffff0d; }
